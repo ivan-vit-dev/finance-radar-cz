@@ -1,0 +1,13 @@
+node_modules/
+.next/
+apps/web/out/
+functions/lib/
+packages/shared/dist/
+.emulator-data/
+*.local
+.env*
+!.env.example
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/

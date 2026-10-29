@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Aplikace má jediného uživatele. Přístup má jen účet, jehož UID je zapsané
+// v kolekci "admins" (dokument se zakládá ručně ve Firebase konzoli).
+// Data pipeline (zdroje, dokumenty, události, fakta, briefingy) zapisují
+// výhradně Cloud Functions přes Admin SDK, které pravidla obchází.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /{document=**} {
+      allow read: if isOwner();
+    }
+
+    // Uživatelská nastavení (alerty, preference, FCM tokeny).
+    match /users/{uid}/{document=**} {
+      allow write: if isOwner() && request.auth.uid == uid;
+    }
+
+    // Označení chybné analýzy (bod 32).
+    match /feedback/{id} {
+      allow create: if isOwner();
+    }
+  }
+}

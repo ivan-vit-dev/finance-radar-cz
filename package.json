@@ -1,0 +1,15 @@
+{
+  "name": "finance-radar",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "functions",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build": "npm run build -w functions && npm run build -w web",
+    "emulators": "firebase emulators:start --project demo-finance-radar --import=.emulator-data --export-on-exit",
+    "deploy": "npm run build -w functions && firebase deploy --only functions,firestore,storage"
+  }
+}

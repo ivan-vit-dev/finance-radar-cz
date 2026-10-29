@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Design tokeny. Aplikace je dark-first: dashboard se čte hlavně na desktopu
+   a glow priorit vynikne jen na tmavém pozadí. */
+:root {
+  --background: #070a13;
+  --surface: rgb(255 255 255 / 0.035);
+  --surface-strong: rgb(255 255 255 / 0.06);
+  --border: rgb(255 255 255 / 0.08);
+  --foreground: #e7ebf3;
+  --muted: #8a93a8;
+
+  --accent-from: #6366f1;
+  --accent-to: #22d3ee;
+  --accent-glow: rgb(99 102 241 / 0.55);
+
+  /* Priority ze specifikace (bod 12): 🔴 🟠 🟡 🟢 ⚪ */
+  --critical: #ff4d6d;
+  --high: #ff9f43;
+  --important: #fcd34d;
+  --info: #4ade80;
+  --low: #94a3b8;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent-from: var(--accent-from);
+  --color-accent-to: var(--accent-to);
+  --color-critical: var(--critical);
+  --color-high: var(--high);
+  --color-important: var(--important);
+  --color-info: var(--info);
+  --color-low: var(--low);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background:
+    radial-gradient(60rem 40rem at 10% -10%, rgb(99 102 241 / 0.18), transparent 60%),
+    radial-gradient(50rem 35rem at 100% 0%, rgb(34 211 238 / 0.10), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
+  color: var(--foreground);
+}
+
+@utility glass {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+}
+
+@utility glow-accent {
+  box-shadow:
+    0 0 0 1px rgb(99 102 241 / 0.25),
+    0 20px 60px -20px var(--accent-glow);
+}
+
+/* Glow jen pro priority, které si pozornost zaslouží. */
+@utility glow-critical {
+  box-shadow: 0 0 0 1px rgb(255 77 109 / 0.35), 0 0 32px -8px rgb(255 77 109 / 0.6);
+}
+
+@utility glow-high {
+  box-shadow: 0 0 0 1px rgb(255 159 67 / 0.3), 0 0 28px -10px rgb(255 159 67 / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
