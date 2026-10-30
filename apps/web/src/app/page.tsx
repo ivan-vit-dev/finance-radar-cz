@@ -26,8 +26,26 @@ const PLACEHOLDER_INDICATORS = ["Repo sazba", "Hypotéky", "Inflace", "EUR/CZK"]
 
 const NAV = ["Dashboard", "Radar", "ČNB", "Hypotéky", "Nemovitosti", "Legislativa", "Briefing"];
 
+function greetingFor(hour: number): string {
+  if (hour >= 4 && hour < 9) return "Dobré ráno";
+  if (hour >= 9 && hour < 12) return "Dobré dopoledne";
+  if (hour >= 12 && hour < 18) return "Dobré odpoledne";
+  return "Dobrý večer";
+}
+
+/** Aktuální čas obnovovaný každou minutu – aplikace může zůstat otevřená celý den. */
+function useNow(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 export default function DashboardPage() {
   const user = useUser();
+  const now = useNow();
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null | undefined>(undefined);
 
   useEffect(
@@ -40,7 +58,7 @@ export default function DashboardPage() {
     [],
   );
 
-  const today = new Date().toLocaleDateString("cs-CZ", {
+  const today = now.toLocaleDateString("cs-CZ", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -76,7 +94,7 @@ export default function DashboardPage() {
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm capitalize text-muted">{today}</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight">Dobré ráno</h1>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight">{greetingFor(now.getHours())}</h1>
           </div>
           <CriticalBadge count={snapshot?.criticalCount ?? 0} />
         </header>

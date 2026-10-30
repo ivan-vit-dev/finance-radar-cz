@@ -1,4 +1,40 @@
 {
-  "indexes": [],
-  "fieldOverrides": []
+  "indexes": [
+    {
+      "collectionGroup": "documents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "fetchedAt", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "documents",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "documents",
+      "fieldPath": "perex",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "documents",
+      "fieldPath": "title",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "documents",
+      "fieldPath": "url",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "sourceState",
+      "fieldPath": "seen",
+      "indexes": []
+    }
+  ]
 }

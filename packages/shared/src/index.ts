@@ -1,16 +1,19 @@
 // Sdílené doménové typy a deterministická logika (scoring) pro web i Cloud Functions.
 // Pravidlo ze specifikace (bod 31): výpočty, procenta a prahy počítá kód, nikdy AI.
 
-export type Category =
-  | "mortgages"
-  | "consumer_loans"
-  | "cnb"
-  | "banks"
-  | "real_estate"
-  | "insurance"
-  | "economy"
-  | "legislation"
-  | "markets";
+export const CATEGORIES = [
+  "mortgages",
+  "consumer_loans",
+  "cnb",
+  "banks",
+  "real_estate",
+  "insurance",
+  "economy",
+  "legislation",
+  "markets",
+] as const;
+
+export type Category = (typeof CATEGORIES)[number];
 
 export type SourceTier = 1 | 2 | 3 | 4;
 
@@ -28,23 +31,41 @@ export interface Source {
   frequencyMinutes: number;
   categories: Category[];
   enabled: boolean;
-  lastFetchedAt?: string;
-  lastError?: string;
 }
 
-/** Surový stažený dokument. Po uložení se nemění (bod 32). */
+/** Provozní stav zdroje, kolekce `sourceState/{sourceId}`. Konfigurace zdroje je v kódu. */
+export interface SourceState {
+  lastFetchedAt?: string;
+  lastSuccessAt?: string;
+  lastError?: string | null;
+  consecutiveErrors: number;
+  lastNewCount: number;
+  /** Hashe nedávno viděných URL (nejnovější první, omezený počet) – dedup za 1 čtení na zdroj. */
+  seen: string[];
+}
+
+export type DocumentStatus = "pending" | "classified" | "discarded" | "error";
+
+/**
+ * Šetrný záznam o dokumentu, kolekce `documents/{id}`, id = hash kanonické URL.
+ * Plný text se neukládá: stáhne se jen při zpracování AI a zahodí se.
+ * Jako důkaz slouží odkaz a doslovné citace u extrahovaných faktů.
+ */
 export interface SourceDocument {
   id: string;
   sourceId: string;
+  tier: SourceTier;
   url: string;
   title: string;
-  publishedAt: string;
+  /** Perex z RSS, zkrácený na PEREX_MAX_CHARS. */
+  perex: string;
+  publishedAt: string | null;
   fetchedAt: string;
-  contentHash: string;
-  /** Cesta k plnému textu v Cloud Storage. */
-  storagePath: string;
-  status: "new" | "classified" | "discarded" | "clustered" | "error";
+  status: DocumentStatus;
 }
+
+export const PEREX_MAX_CHARS = 300;
+export const TITLE_MAX_CHARS = 300;
 
 export type StatementType = "fact" | "interpretation" | "forecast" | "opinion";
 

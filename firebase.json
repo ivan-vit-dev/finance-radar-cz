@@ -7,7 +7,16 @@
       "ignore": [
         "node_modules",
         ".git",
-        "*.local"
+        "*.local",
+        "src",
+        "scripts",
+        ".phase0-data",
+        "*.test.ts",
+        "build.mjs",
+        "tsconfig*.json"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
       ]
     }
   ],
