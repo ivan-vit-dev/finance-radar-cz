@@ -9,7 +9,6 @@ import {
   getDoc,
   getDocs,
   limit,
-  orderBy,
   query,
   where,
 } from "firebase/firestore";
@@ -76,7 +75,8 @@ export default function StatusPage() {
       const [stateSnap, indSnap, usageSnap, runtime, ...statusCounts] = await Promise.all([
         getDocs(collection(db, "sourceState")),
         getDocs(collection(db, "indicators")),
-        getDocs(query(collection(db, "aiUsage"), where(documentId(), ">=", since), orderBy(documentId(), "desc"), limit(30))),
+        // Vzestupně: sestupné řazení podle ID by vyžadovalo zvláštní index. Otočí se až níže.
+        getDocs(query(collection(db, "aiUsage"), where(documentId(), ">=", since), limit(31))),
         getDoc(doc(db, "config", "runtime")),
         ...["pending", "classified", "discarded", "error"].map((s) =>
           getCountFromServer(query(collection(db, "documents"), where("status", "==", s))),
@@ -85,7 +85,7 @@ export default function StatusPage() {
       ]);
       setStates(Object.fromEntries(stateSnap.docs.map((d) => [d.id, d.data() as SourceState])));
       setIndicators(indSnap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<IndicatorStatus, "id">) })));
-      setUsage(usageSnap.docs.map((d) => ({ date: d.id, ...(d.data() as Omit<UsageDay, "date">) })));
+      setUsage(usageSnap.docs.map((d) => ({ date: d.id, ...(d.data() as Omit<UsageDay, "date">) })).reverse());
       setPausedUntil((runtime.data()?.pausedUntil as string | undefined) ?? null);
       const names = ["pending", "classified", "discarded", "error", "events"];
       setCounts(Object.fromEntries(statusCounts.map((c, i) => [names[i], c.data().count])));
