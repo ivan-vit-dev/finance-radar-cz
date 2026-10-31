@@ -2,32 +2,27 @@
 
 Produktová specifikace: [specs.md](specs.md). Tento dokument popisuje, **jak** ji postavíme.
 
-## ▶ Kde pokračovat (stav k 30. 10. 2026 večer)
+## ▶ Kde pokračovat (stav k 31. 10. 2026 – vývoj uzavřen do roku 2027)
 
-**Hotovo:**
-- Kostra monorepa (web, functions, shared), build a lint prochází, emulátory naběhnou.
-- Firebase projekt `finance-radar-cz` pod účtem `vvit2.developer@gmail.com` (Firebase CLI je v této složce přepnuté na tento účet). Tarif Blaze, přihlášení Googlem zapnuté.
-- Firestore `(default)` v `europe-west3`, security rules nasazené, vlastník v kolekci `admins`.
-- Secrets `ANTHROPIC_API_KEY` a `CNB_ARAD_API_KEY` v Secret Manageru, lokálně v `functions/.secret.local` (mimo git).
-- Web běží na Vercelu, deployment řeší vlastník sám.
-- **Fáze 0** téměř hotová: inventář zdrojů ([docs/zdroje.md](docs/zdroje.md)), prompty pro klasifikaci, extrakci a analýzu změřené na reálných datech ([docs/faze0-vysledky.md](docs/faze0-vysledky.md)).
-- **Provozní model přestavěn na „analýzu na vyžádání“** (30. 10. 2026), viz sekce Provozní model.
+**Stav:** V1 je hotová a v provozu. Vlastník ji používá od roku 2027 (spolu s manželkou). Do té doby se provoz uspí pauzou `config/runtime.pausedUntil` (viz sekce Pozastavení provozu).
 
-**Další kroky (v tomto pořadí):**
-1. ~~Zkontrolovat noční ingestion~~ Ověřeno 31. 10. 2026: 146 dokumentů, všech 8 zdrojů bez chyb. (`firebase functions:log` umí jen omezený počet záznamů; stav zdrojů je spolehlivěji vidět ve Firestore `sourceState`.)
-2. ~~Fáze 3~~ nasazeno 31. 10. 2026, dashboard ukazuje 6 ukazatelů.
-3. ~~Fáze 4~~ nasazeno 31. 10. 2026 odpoledne, zpracovává frontu (20 článků za běh).
-4. ~~Fáze 5~~ nasazeno 31. 10. 2026 (backend), web nasazuje vlastník.
-5. ~~Fáze 6~~ nasazeno 31. 10. 2026, vlastník ověřil, že vše funguje.
-6. ~~Sekce Úvěry, Pojištění, Investice~~ nasazeno 31. 10. 2026 (Peníze.cz z cloudu blokuje, vypnuto).
-7. **Legislativa, Stav systému, Vysvětli jednoduše, Nápověda** hotové (31. 10. 2026), zbývá nasadit.
-8. Před koncem vývoje: nastavit pauzu `config/runtime.pausedUntil` (např. `2027-01-01`).
+**V produkci běží** (Firebase `finance-radar-cz`, účet `vvit2.developer@gmail.com`; web na Vercelu `https://finance-radar-cz-dvhf.vercel.app`, nasazuje vlastník):
+- dispatcher (každých 15 min): sběr 11 zdrojů, 7 ukazatelů ČNB/ARAD/ČSÚ, legislativa (Sněmovna + e-Sbírka), AI třídění a extrakce (Haiku), slučování do událostí, ověření a skóre, automatická analýza kritických událostí (Opus), push alerty
+- na vyžádání: `analyzeEvent`, `explainEvent`, `getBriefing`, `sendTestNotification`
+- web: Dashboard s briefingem, Radar, sekce ČNB/Hypotéky/Úvěry/Nemovitosti/Pojištění/Investice (každá vlastní barva), Legislativa, detail události s analýzou, Nastavení alertů, Stav systému, Nápověda, desktopová PWA
+
+**Až se v lednu 2027 znovu otevře:**
+1. Ověřit na stránce **Stav systému**, že se provoz po pauze obnovil (všechny zdroje 🟢, ukazatele aktuální, útrata AI).
+2. Přidat manželku: přihlásí se, z Authentication → Users zkopírovat UID, založit `admins/{UID}`. Ona si v Nastavení zapne notifikace.
+3. Po pár týdnech používání vyhodnotit: kvalitu třídění (co chybí, co je šum), relevanci legislativy (klíčová slova), náklady.
+
+**Otevřené body / nápady na později:**
+- Kurz.cz RSS (investice) – hodně šumu, ~$2,5/měs.; banky a pojišťovny jednotlivě (inventář zdrojů); Senát a vláda (HTML collector).
+- V2 ze specifikace: stránka Trh s grafy, týdenní a měsíční reporty, časová osa, chatbot s RAG.
+- Na Firebase Hostingu zůstala stará verze (`finance-radar-cz.web.app`) – lze vypnout `firebase hosting:disable`.
+- `functions/.env` (APP_URL) a `functions/.secret.local` jsou jen lokálně (mimo git); při nasazení z jiného počítače je vytvořit znovu.
 
 Rozhodnuto 30. 10. 2026: retence zůstává (nerelevantní dokumenty TTL 30 dní, relevantní se zatím nemažou). Zkrácení na 7/90 dní je možné, ale z hlediska nákladů zbytečné (~15–20 MB ročně).
-
-**Otevřené body:**
-- Na Firebase Hostingu zůstala nasazená stará verze (`finance-radar-cz.web.app`). Rozhodnout, zda ji vypnout (`firebase hosting:disable`).
-- Necommitnuté změny od prvního commitu (fáze 0).
 
 ## Rozhodnutí
 
