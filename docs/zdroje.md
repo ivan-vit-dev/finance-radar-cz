@@ -124,7 +124,7 @@ Důvod: sekce Úvěry, Pojištění a Investice měly z původních zdrojů 0, 0
 |---|---|---|---|---|---|
 | ČAP – tiskové zprávy | HTML (seznam) | `https://www.cap.cz/tiskove-centrum/tiskove-zpravy` | 1 / 95 | ✅ | bez RSS; HTML collector bere odkazy `/tiskove-centrum/tiskove-zpravy/<číslo>-…`, datum stránka strojově neuvádí |
 | oPojištění.cz | RSS | `https://www.opojisteni.cz/rss/` | 2 / 75 | ✅ | specializovaný portál o pojišťovnictví |
-| Peníze.cz | RSS | `https://www.penize.cz/rss` | 2 / 75 | ✅ | osobní finance: úvěry, pojištění, investice |
+| Peníze.cz | RSS | `https://www.penize.cz/rss` | 2 / 75 | ❌ vypnuto | z Google Cloud vrací HTTP 403 (blokuje IP datacenter), lokálně funguje; neobcházet |
 | Investujeme.cz | RSS | `https://www.investujeme.cz/rss/` | 3 / 50 | ✅ | provozuje Swiss Life (finanční firma), proto jen sekundární |
 | Kurzy.cz | RSS | `https://www.kurzy.cz/zpravy/util/forext.dat?type=rss` | – | ⚠️ nezapnuto | ~50 zpráv za pár hodin, hodně šumu (kultura, armáda); +$2,5/měs. za klasifikaci |
 | ČLFA, Finanční arbitr, AKAT | – | – | – | ❌ | RSS nenalezeno |

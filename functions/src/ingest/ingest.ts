@@ -114,6 +114,7 @@ export async function runIngestion(db: Firestore, now = new Date(), sources = MV
           lastError: null,
           consecutiveErrors: 0,
           lastNewCount: docs.length,
+          ...(docs.length > 0 ? { lastNewAt: now.toISOString() } : {}),
         } satisfies SourceState);
         await batch.commit();
 

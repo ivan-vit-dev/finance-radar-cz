@@ -42,6 +42,8 @@ export interface Source {
 export interface SourceState {
   lastFetchedAt?: string;
   lastSuccessAt?: string;
+  /** Kdy zdroj naposledy přinesl novou položku – odhalí „tichý“ zdroj (změněná adresa kanálu apod.). */
+  lastNewAt?: string;
   lastError?: string | null;
   consecutiveErrors: number;
   lastNewCount: number;
@@ -160,6 +162,10 @@ export interface MarketEvent {
   /** Zvyšuje se při každé změně (nový zdroj, nová fakta). */
   revision: number;
   analysis?: EventAnalysis;
+  /** Odkazy na primární zdroje u událostí, které nevznikly z článků (např. legislativa). */
+  links?: { label: string; url: string }[];
+  /** „Vysvětli jednoduše“ – generuje se na kliknutí, pro revizi události. */
+  explanation?: { text: string; model: string; promptVersion: string; generatedAt: string; revision: number };
   /** Komu už odešel push alert (uid -> čas) – každý uživatel max. jeden alert na událost. */
   alertedUsers?: Record<string, unknown>;
 }
@@ -213,6 +219,44 @@ export interface Briefing {
   numbers: DashboardSnapshot["indicators"];
   /** Události, ze kterých briefing vychází (pro odkazy). */
   events: Pick<MarketEvent, "id" | "title" | "priority" | "finalScore">[];
+}
+
+// ---------------------------------------------------------------------------
+// Legislativa (bod 23 specifikace). Fáze počítá kód z dat Sněmovny a e-Sbírky, ne AI.
+
+export const LEGISLATION_PHASES = ["snemovna", "senat", "prezident", "vyhlaseno", "ucinne"] as const;
+export type LegislationPhase = (typeof LEGISLATION_PHASES)[number] | "ukonceno";
+
+export const LEGISLATION_PHASE_LABELS: Record<LegislationPhase, string> = {
+  snemovna: "Návrh ve Sněmovně",
+  senat: "Schváleno Sněmovnou – Senát",
+  prezident: "U prezidenta",
+  vyhlaseno: "Vyhlášeno",
+  ucinne: "Účinné",
+  ukonceno: "Ukončeno bez schválení",
+};
+
+/** Zákon (sněmovní tisk), kolekce `legislation/{id}`. Ukládají se jen tisky relevantní pro poradce. */
+export interface LegislationItem {
+  id: string;
+  /** Číslo sněmovního tisku a volební období (např. 320, 10). */
+  tisk: number;
+  term: number;
+  title: string;
+  fullTitle: string;
+  proposer: string;
+  submittedAt: string | null;
+  phase: LegislationPhase;
+  /** Podrobný stav podle Sněmovny, např. „2. čtení“. */
+  stateLabel: string;
+  lastStepAt: string | null;
+  sbirka?: { cislo: number; rok: number; publishedAt: string | null };
+  effectiveFrom?: string;
+  categories: Category[];
+  /** Klíčová slova, kvůli kterým je zákon považovaný za relevantní. */
+  matched: string[];
+  url: string;
+  updatedAt: string;
 }
 
 /**

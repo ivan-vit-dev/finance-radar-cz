@@ -239,6 +239,7 @@ export async function runProcessing(
       facts,
       revision: (existing?.revision ?? 0) + 1,
       ...(existing?.analysis ? { analysis: existing.analysis } : {}),
+      ...(existing?.explanation ? { explanation: existing.explanation } : {}),
       // Bez přenosu by sloučení dalšího zdroje poslalo stejný alert znovu.
       ...(existing?.alertedUsers ? { alertedUsers: existing.alertedUsers } : {}),
     };

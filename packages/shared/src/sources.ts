@@ -105,6 +105,29 @@ export const MVP_SOURCES: Source[] = [
     categories: ["mortgages", "consumer_loans", "insurance"],
     enabled: true,
   },
+  // --- Legislativa (přidáno 31. 10. 2026) – zpracovává functions/src/legislation, ne sběr článků ---
+  {
+    id: "psp-tisky",
+    name: "Poslanecká sněmovna – sněmovní tisky",
+    kind: "api",
+    url: "https://www.psp.cz/eknih/cdrom/opendata/tisky.zip",
+    tier: 1,
+    priority: 100,
+    frequencyMinutes: 720,
+    categories: ["legislation"],
+    enabled: true,
+  },
+  {
+    id: "e-sbirka",
+    name: "e-Sbírka – účinnost předpisů",
+    kind: "api",
+    url: "https://opendata.eselpoint.gov.cz/sparql",
+    tier: 1,
+    priority: 100,
+    frequencyMinutes: 720,
+    categories: ["legislation"],
+    enabled: true,
+  },
   // --- Úvěry, pojištění, investice (přidáno 31. 10. 2026) ---
   {
     id: "cap-tz",
@@ -138,7 +161,8 @@ export const MVP_SOURCES: Source[] = [
     priority: 75,
     frequencyMinutes: 60,
     categories: ["consumer_loans", "insurance", "markets", "mortgages"],
-    enabled: true,
+    // Z Google Cloud vrací HTTP 403 (blokuje IP datacenter), lokálně funguje. Neobcházet.
+    enabled: false,
   },
   {
     id: "investujeme",

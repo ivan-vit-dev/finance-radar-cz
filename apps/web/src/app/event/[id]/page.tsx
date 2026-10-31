@@ -156,6 +156,8 @@ function EventDetail() {
             )}
           </section>
 
+          <ExplainSimply event={event} />
+
           <section aria-labelledby="facts-h">
             <SectionTitle id="facts-h">Tvrzení a jejich zdroje</SectionTitle>
             <div className="space-y-4">
@@ -190,7 +192,22 @@ function EventDetail() {
                   {d.publishedAt && <p className="mt-1 text-xs text-muted">{new Date(d.publishedAt).toLocaleString("cs-CZ")}</p>}
                 </li>
               ))}
-              {docs.length === 0 && <li className="p-4 text-sm text-muted">Načítám zdroje…</li>}
+              {(event.links ?? []).map((l) => (
+                <li key={l.url} className="p-4">
+                  <p className="text-xs text-info">primární zdroj</p>
+                  <a
+                    href={l.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block text-sm font-medium hover:text-accent-to hover:underline"
+                  >
+                    {l.label} ↗
+                  </a>
+                </li>
+              ))}
+              {event.documentIds.length > 0 && docs.length === 0 && (
+                <li className="p-4 text-sm text-muted">Načítám zdroje…</li>
+              )}
             </ul>
           </section>
 
@@ -297,6 +314,48 @@ function AnalysisView({ analysis, stale, eventId }: { analysis: EventAnalysis; s
         </span>
         <FeedbackButton eventId={eventId} revision={analysis.revision} />
       </footer>
+    </div>
+  );
+}
+
+/** „Vysvětli jednoduše“ (bod 19 specifikace) – generuje se až na kliknutí a uloží se. */
+function ExplainSimply({ event }: { event: MarketEvent }) {
+  const [state, setState] = useState<"idle" | "loading" | "error">("idle");
+  const [message, setMessage] = useState("");
+  const current = event.explanation?.revision === event.revision ? event.explanation : undefined;
+
+  if (current) {
+    return (
+      <section aria-labelledby="explain-h" className="glass rounded-2xl p-5">
+        <h2 id="explain-h" className="text-sm font-semibold">
+          🤖 Jednoduše vysvětleno
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed">{current.text}</p>
+        <p className="mt-2 text-xs text-muted">AI vysvětlení obecných pojmů ({current.model}), fakta ověřuj ve zdrojích.</p>
+      </section>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        disabled={state === "loading"}
+        onClick={async () => {
+          setState("loading");
+          try {
+            await httpsCallable(functions, "explainEvent")({ eventId: event.id });
+            setState("idle");
+          } catch (e) {
+            setMessage((e as Error).message);
+            setState("error");
+          }
+        }}
+        className="rounded-xl bg-surface-strong px-4 py-2 text-sm ring-1 ring-border transition hover:ring-accent-to disabled:opacity-60"
+      >
+        {state === "loading" ? "Vysvětluji…" : "🤖 Vysvětli jednoduše"}
+      </button>
+      {state === "error" && <span className="text-sm text-critical">{message}</span>}
     </div>
   );
 }

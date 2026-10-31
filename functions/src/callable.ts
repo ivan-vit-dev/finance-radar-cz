@@ -1,5 +1,6 @@
 import type { Briefing, DashboardSnapshot, MarketEvent } from "@finance-radar/shared";
 import { BRIEFING_PROMPT_VERSION, generateBriefing } from "./ai/briefing.js";
+import { EXPLAIN_PROMPT_VERSION, explainSimply } from "./ai/explain.js";
 import type { Firestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { HttpsError } from "firebase-functions/v2/https";
@@ -71,6 +72,41 @@ export async function handleAnalyzeEvent(db: Firestore, uid: string | undefined,
     await ref.update({ analysisRequestedAt: null });
     if (e instanceof HttpsError) throw e;
     throw new HttpsError("internal", "Analýzu se nepodařilo vytvořit, zkus to prosím znovu.");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// „Vysvětli jednoduše“ (bod 19 specifikace)
+
+/** Jednoduché vysvětlení pojmů události. Uloží se k události a pro stejnou revizi se negeneruje znovu. */
+export async function handleExplainEvent(db: Firestore, uid: string | undefined, eventId: unknown, now = new Date()) {
+  await assertAdmin(db, uid);
+  if (typeof eventId !== "string" || !/^[\w-]{1,64}$/.test(eventId)) {
+    throw new HttpsError("invalid-argument", "Neplatné ID události.");
+  }
+  const ref = db.collection("events").doc(eventId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Událost neexistuje.");
+  const e = snap.data() as MarketEvent;
+  if (e.explanation?.revision === e.revision) return { status: "ready" as AnalyzeStatus };
+
+  await assertCanSpend(db, now);
+  try {
+    const r = await explainSimply(e);
+    await recordUsage(db, now, [r.cost]);
+    await ref.update({
+      explanation: {
+        text: r.text,
+        model: r.model,
+        promptVersion: EXPLAIN_PROMPT_VERSION,
+        generatedAt: now.toISOString(),
+        revision: e.revision,
+      },
+    });
+    return { status: "generated" as AnalyzeStatus };
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    throw new HttpsError("internal", "Vysvětlení se nepodařilo vytvořit, zkus to prosím znovu.");
   }
 }
 

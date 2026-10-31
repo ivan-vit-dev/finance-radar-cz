@@ -19,7 +19,9 @@ Produktová specifikace: [specs.md](specs.md). Tento dokument popisuje, **jak** 
 3. ~~Fáze 4~~ nasazeno 31. 10. 2026 odpoledne, zpracovává frontu (20 článků za běh).
 4. ~~Fáze 5~~ nasazeno 31. 10. 2026 (backend), web nasazuje vlastník.
 5. ~~Fáze 6~~ nasazeno 31. 10. 2026, vlastník ověřil, že vše funguje.
-6. **Sekce Úvěry, Pojištění, Investice** (31. 10. 2026): 4 nové zdroje (ČAP přes nový HTML collector, oPojištění, Peníze.cz, Investujeme.cz), ukazatel sazby spořicích účtů, ukazatele nad každou sekcí. Zbývá nasadit.
+6. ~~Sekce Úvěry, Pojištění, Investice~~ nasazeno 31. 10. 2026 (Peníze.cz z cloudu blokuje, vypnuto).
+7. **Legislativa, Stav systému, Vysvětli jednoduše, Nápověda** hotové (31. 10. 2026), zbývá nasadit.
+8. Před koncem vývoje: nastavit pauzu `config/runtime.pausedUntil` (např. `2027-01-01`).
 
 Rozhodnuto 30. 10. 2026: retence zůstává (nerelevantní dokumenty TTL 30 dní, relevantní se zatím nemažou). Zkrácení na 7/90 dní je možné, ale z hlediska nákladů zbytečné (~15–20 MB ročně).
 
@@ -222,7 +224,15 @@ Embeddingy: Anthropic embedding model nenabízí. Pro dedup a RAG použijeme ext
 - [ ] Nasazení funkcí (`getBriefing`, `sendTestNotification`, dispatcher s alerty) a webu
 
 ### Fáze 7 – Zpevnění (~1 týden)
-- [ ] Monitoring zdrojů, sledování nákladů AI, retence raw dat
+- [x] Stránka **Stav systému** (`/stav`): zdroje (poslední stažení, poslední nová položka, „tichý“ zdroj, chyby), ukazatele, útrata za AI po dnech (`aiUsage`), počty článků podle stavu, stav pauzy. `sourceState.lastNewAt`
+- [x] Retence: nerelevantní články TTL 30 dní (od fáze 2), plné texty se neukládají
+
+### Doplňky (31. 10. 2026)
+- [x] **„Vysvětli jednoduše“** (callable `explainEvent`, Opus, ~$0,01, uloží se k revizi události)
+- [x] **Legislativa** (`functions/src/legislation`): data Sněmovny (`tisky.zip`, 4 MB, 2× denně) + účinnost z e-Sbírky (SPARQL `účinnost-znění-od`). Fáze Sněmovna → Senát → Prezident → Vyhlášeno → Účinné počítá kód. Relevance podle klíčových slov v názvu (bez zdravotního, sociálního a důchodového pojištění). 48 zákonů, ~33 kB. Při změně fáze vznikne událost (tier 1, skóre podle fáze) → radar, briefing, alerty; při prvním běhu ne. Stránka `/legislativa` s ukazatelem průběhu
+- [x] **Nápověda** (`/napoveda`): jak aplikace funguje, obnova dat, tabulka zdrojů (generovaná z registru), barvy a skóre, ověření, typy tvrzení, ukazatele, legislativa, co dělá AI a co ne, alerty, náklady a pauza
+- [x] Peníze.cz vypnuto (z Google Cloud HTTP 403)
+- [ ] Nasazení funkcí (`explainEvent`, dispatcher s legislativou) a webu
 
 **Doporučení k rozsahu:** nejdřív „MVP-0“ (ČNB + hypotéky + ukazatele + briefing, ~10 zdrojů) a 2–3 týdny ho používat naostro. Teprve pak přidávat banky, pojištění a legislativu.
 

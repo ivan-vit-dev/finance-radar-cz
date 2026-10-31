@@ -3,12 +3,14 @@ import { getFirestore } from "firebase-admin/firestore";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { handleAnalyzeEvent, handleGetBriefing, handleSendTestNotification } from "./callable.js";
+import { handleAnalyzeEvent, handleExplainEvent, handleGetBriefing, handleSendTestNotification } from "./callable.js";
 import { defineSecret, defineString } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import { runIndicators } from "./indicators/update.js";
 import { runIngestion } from "./ingest/ingest.js";
-import { runProcessing } from "./pipeline/process.js";
+import { runLegislation } from "./legislation/sync.js";
+import { sendAlerts } from "./pipeline/alerts.js";
+import { rebuildDashboardEvents, runProcessing } from "./pipeline/process.js";
 import { readPauseState } from "./runtime.js";
 
 initializeApp();
@@ -42,17 +44,24 @@ export const dispatcher = onSchedule(
     }
     if (pause.invalid) logger.warn("config/runtime.pausedUntil má neplatný formát, čekám YYYY-MM-DD", pause);
 
-    const [ingestion, indicators] = await Promise.all([
+    const site = appUrl.value().replace(/\/+$/, "");
+    const [ingestion, indicators, legislation] = await Promise.all([
       runIngestion(db),
       runIndicators(db, new Date(), cnbAradApiKey.value()),
+      runLegislation(db),
     ]);
+
+    // Změny fáze zákonů vytvořily události – dashboard a alerty jako u ostatních událostí.
+    if (legislation.events.length > 0) {
+      await rebuildDashboardEvents(db, new Date());
+      await sendAlerts(db, legislation.events, site).catch((e: Error) =>
+        logger.warn("alerty legislativy selhaly", { error: e.message }),
+      );
+    }
 
     // AI zpracování až po stažení, aby zahrnulo i nejnovější články.
     process.env.ANTHROPIC_API_KEY = anthropicApiKey.value();
-    const processing = await runProcessing(db, new Date(), {
-      sendAlerts: true,
-      appUrl: appUrl.value().replace(/\/+$/, ""),
-    });
+    const processing = await runProcessing(db, new Date(), { sendAlerts: true, appUrl: site });
 
     const ran = ingestion.filter((r) => r.status !== "skipped");
     const saved = ran.reduce((s, r) => s + (r.saved ?? 0), 0);
@@ -62,11 +71,13 @@ export const dispatcher = onSchedule(
       sources: ran.length,
       saved,
       indicators: checked.map((r) => `${r.id}:${r.status}`),
+      legislation: { status: legislation.status, items: legislation.items, changed: legislation.changed, events: legislation.events.length },
       processing,
-      errors: errors.length + processing.errors.length,
+      errors: errors.length + processing.errors.length + (legislation.status === "error" ? 1 : 0),
       results: ran,
     });
     for (const e of errors) logger.warn("zdroj selhal", e);
+    if (legislation.error) logger.warn("legislativa selhala", { error: legislation.error });
     for (const e of processing.errors) logger.warn("zpracování selhalo", { error: e });
   },
 );
@@ -86,6 +97,15 @@ export const getBriefing = onCall(
   async (request) => {
     process.env.ANTHROPIC_API_KEY = anthropicApiKey.value();
     return handleGetBriefing(getFirestore(), request.auth?.uid);
+  },
+);
+
+/** „Vysvětli jednoduše“ v detailu události (Opus, uloží se). */
+export const explainEvent = onCall(
+  { secrets: [anthropicApiKey], timeoutSeconds: 60, maxInstances: 2 },
+  async (request) => {
+    process.env.ANTHROPIC_API_KEY = anthropicApiKey.value();
+    return handleExplainEvent(getFirestore(), request.auth?.uid, (request.data as { eventId?: unknown })?.eventId);
   },
 );
 
