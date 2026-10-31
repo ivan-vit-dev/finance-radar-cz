@@ -16,8 +16,9 @@ Produktová specifikace: [specs.md](specs.md). Tento dokument popisuje, **jak** 
 **Další kroky (v tomto pořadí):**
 1. ~~Zkontrolovat noční ingestion~~ Ověřeno 31. 10. 2026: 146 dokumentů, všech 8 zdrojů bez chyb. (`firebase functions:log` umí jen omezený počet záznamů; stav zdrojů je spolehlivěji vidět ve Firestore `sourceState`.)
 2. ~~Fáze 3~~ nasazeno 31. 10. 2026, dashboard ukazuje 6 ukazatelů.
-3. **Fáze 4:** hotová a otestovaná proti emulátoru (31. 10. 2026), zbývá nasadit.
-4. **Fáze 5:** detail události s analýzou na vyžádání, radar, sekce.
+3. ~~Fáze 4~~ nasazeno 31. 10. 2026 odpoledne, zpracovává frontu (20 článků za běh).
+4. **Fáze 5:** radar, detail události a analýza na vyžádání hotové (31. 10. 2026), zbývá nasadit funkce a web.
+5. **Fáze 6:** briefing při prvním otevření dne, push alerty.
 
 Rozhodnuto 30. 10. 2026: retence zůstává (nerelevantní dokumenty TTL 30 dní, relevantní se zatím nemažou). Zkrácení na 7/90 dní je možné, ale z hlediska nákladů zbytečné (~15–20 MB ročně).
 
@@ -197,12 +198,17 @@ Embeddingy: Anthropic embedding model nenabízí. Pro dedup a RAG použijeme ext
 - [ ] Nasazení (`firebase deploy --only functions,firestore`), včetně přepínače pauzy
 
 ### Fáze 5 – UI a analýza na vyžádání (~2–3 týdny)
-- [ ] Dashboard napojený na `dashboard/today`
-- [ ] Radar (seznam událostí s fakty a skóre, bez AI textu)
-- [ ] Detail události `/event/[id]`: fakta hned; analýza přes callable `analyzeEvent` (uložená, příště okamžitě), stav „generuji analýzu“
-- [ ] „Vysvětli jednoduše“, „Co říct klientovi“ (streamované), „Označit chybnou analýzu“
-- [ ] Sekce ČNB, Hypotéky, Nemovitosti
-- [ ] Legislativa: NÁVRH → SCHVÁLENO → SENÁT → VYHLÁŠENO → ÚČINNÉ (stav nastavuje kód podle psp.cz a e-Sbírky)
+- [x] Dashboard napojený na `dashboard/today`, top zprávy vedou na detail
+- [x] Radar `/radar`: události za 7 dní, filtr oblasti a priority, řazení podle času nebo důležitosti
+- [x] Sekce ČNB, Hypotéky, Nemovitosti, Legislativa = radar s filtrem (`/radar?c=…`); sdílené menu (AppShell) i pro úzké okno
+- [x] Detail události `/event/[id]`: fakta s odznaky FAKT/ANALÝZA/ODHAD/NÁZOR, doslovné citace s odkazem na originál, výsledek ověření proti datům ČNB/ČSÚ, zdroje
+- [x] Callable `analyzeEvent` ([functions/src/callable.ts](functions/src/callable.ts)): jen admin, respektuje pauzu a denní strop $3, zámek proti dvojímu spuštění, stejná revize se neanalyzuje dvakrát. Ověřeno proti emulátoru (generated → ready, souběh → 1× placeno, cizí účet odmítnut)
+- [x] Analýza v detailu: co se stalo, proč, co to znamená, dopad podle oblastí, koho se týká, co sledovat, „pro poradce“, „jak to vysvětlit klientovi“
+- [x] „Označit chybnou analýzu“ → kolekce `feedback`
+- [x] Registr zdrojů přesunut do `packages/shared` (používá ho i web)
+- [ ] Nasazení funkcí (`analyzeEvent`) a webu
+- [ ] „Vysvětli jednoduše“ jako samostatné streamované tlačítko (zatím pokrývá „jak to vysvětlit klientovi“ v analýze)
+- [ ] Legislativa: NÁVRH → SCHVÁLENO → SENÁT → VYHLÁŠENO → ÚČINNÉ (stav nastavuje kód podle psp.cz a e-Sbírky) – vyžaduje nové zdroje
 
 ### Fáze 6 – Briefing a alerty (~1 týden)
 - [ ] Briefing při prvním otevření dne (callable `getBriefing`): období od posledního briefingu, uložený v `briefings/{datum}`

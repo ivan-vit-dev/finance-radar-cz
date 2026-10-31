@@ -1,7 +1,9 @@
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { setGlobalOptions } from "firebase-functions/v2";
+import { onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { handleAnalyzeEvent } from "./callable.js";
 import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import { runIndicators } from "./indicators/update.js";
@@ -61,5 +63,14 @@ export const dispatcher = onSchedule(
     });
     for (const e of errors) logger.warn("zdroj selhal", e);
     for (const e of processing.errors) logger.warn("zpracování selhalo", { error: e });
+  },
+);
+
+/** Analýza události na vyžádání z webu (Opus). Viz callable.ts. */
+export const analyzeEvent = onCall(
+  { secrets: [anthropicApiKey], timeoutSeconds: 120, memory: "512MiB", maxInstances: 2 },
+  async (request) => {
+    process.env.ANTHROPIC_API_KEY = anthropicApiKey.value();
+    return handleAnalyzeEvent(getFirestore(), request.auth?.uid, (request.data as { eventId?: unknown })?.eventId);
   },
 );
