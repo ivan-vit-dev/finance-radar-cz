@@ -47,6 +47,31 @@
       "indexes": []
     },
     {
+      "collectionGroup": "events",
+      "fieldPath": "facts",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "events",
+      "fieldPath": "analysis",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "events",
+      "fieldPath": "summary",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "events",
+      "fieldPath": "entities",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "events",
+      "fieldPath": "title",
+      "indexes": []
+    },
+    {
       "collectionGroup": "dashboard",
       "fieldPath": "indicators",
       "indexes": []

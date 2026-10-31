@@ -12,6 +12,7 @@
     "test": "tsx --test \"src/**/*.test.ts\"",
     "ingest:emulator": "tsx scripts/ingest-once.ts",
     "indicators:emulator": "tsx scripts/indicators-once.ts",
+    "pipeline:emulator": "tsx scripts/pipeline-once.ts",
     "phase0": "tsx scripts/phase0-sample.ts",
     "phase0:analysis": "tsx scripts/phase0-analysis.ts"
   },

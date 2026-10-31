@@ -6,6 +6,8 @@ import { defineSecret } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import { runIndicators } from "./indicators/update.js";
 import { runIngestion } from "./ingest/ingest.js";
+import { runProcessing } from "./pipeline/process.js";
+import { readPauseState } from "./runtime.js";
 
 initializeApp();
 
@@ -24,14 +26,26 @@ export const dispatcher = onSchedule(
     timeZone: "Europe/Prague",
     timeoutSeconds: 300,
     memory: "512MiB",
-    secrets: [cnbAradApiKey],
+    secrets: [cnbAradApiKey, anthropicApiKey],
   },
   async () => {
     const db = getFirestore();
+    // Pauza z `config/runtime.pausedUntil` – viz runtime.ts. Stojí 1 čtení za běh.
+    const pause = await readPauseState(db);
+    if (pause.paused) {
+      logger.info("dispatcher pozastaven", { until: pause.until });
+      return;
+    }
+    if (pause.invalid) logger.warn("config/runtime.pausedUntil má neplatný formát, čekám YYYY-MM-DD", pause);
+
     const [ingestion, indicators] = await Promise.all([
       runIngestion(db),
       runIndicators(db, new Date(), cnbAradApiKey.value()),
     ]);
+
+    // AI zpracování až po stažení, aby zahrnulo i nejnovější články.
+    process.env.ANTHROPIC_API_KEY = anthropicApiKey.value();
+    const processing = await runProcessing(db);
 
     const ran = ingestion.filter((r) => r.status !== "skipped");
     const saved = ran.reduce((s, r) => s + (r.saved ?? 0), 0);
@@ -41,9 +55,11 @@ export const dispatcher = onSchedule(
       sources: ran.length,
       saved,
       indicators: checked.map((r) => `${r.id}:${r.status}`),
-      errors: errors.length,
+      processing,
+      errors: errors.length + processing.errors.length,
       results: ran,
     });
     for (const e of errors) logger.warn("zdroj selhal", e);
+    for (const e of processing.errors) logger.warn("zpracování selhalo", { error: e });
   },
 );

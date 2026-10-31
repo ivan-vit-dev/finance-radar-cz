@@ -15,8 +15,9 @@ Produktová specifikace: [specs.md](specs.md). Tento dokument popisuje, **jak** 
 
 **Další kroky (v tomto pořadí):**
 1. ~~Zkontrolovat noční ingestion~~ Ověřeno 31. 10. 2026: 146 dokumentů, všech 8 zdrojů bez chyb. (`firebase functions:log` umí jen omezený počet záznamů; stav zdrojů je spolehlivěji vidět ve Firestore `sourceState`.)
-2. **Fáze 3:** ukazatele hotové a otestované (31. 10. 2026), zbývá nasadit funkce a nový web.
-3. **Fáze 4:** klasifikace a extrakce nad uloženými dokumenty (stav `pending`) a naplnění „Dnešní top zprávy“.
+2. ~~Fáze 3~~ nasazeno 31. 10. 2026, dashboard ukazuje 6 ukazatelů.
+3. **Fáze 4:** hotová a otestovaná proti emulátoru (31. 10. 2026), zbývá nasadit.
+4. **Fáze 5:** detail události s analýzou na vyžádání, radar, sekce.
 
 Rozhodnuto 30. 10. 2026: retence zůstává (nerelevantní dokumenty TTL 30 dní, relevantní se zatím nemažou). Zkrácení na 7/90 dní je možné, ale z hlediska nákladů zbytečné (~15–20 MB ročně).
 
@@ -54,6 +55,19 @@ Aplikace se neotevírá každý den. Proto se dělí na levnou část, která b�
 | „Vysvětli jednoduše“, „Co říct klientovi“ | na kliknutí, streamuje se do UI | |
 
 Kompromis: první otevření detailu nové události trvá zhruba 10–15 s (generuje se analýza). Briefing se při prvním otevření dne generuje zhruba 20–40 s. UI během toho ukazuje už hotová fakta a skóre.
+
+### Pozastavení provozu (rozhodnuto 31. 10. 2026)
+
+Aplikace se bude naplno používat až od roku 2027 (manželka). Po dokončení implementace se provoz pozastaví a k nastavenému datu se sám obnoví.
+
+- **Jak:** ve Firebase konzoli → Firestore → kolekce `config`, dokument `runtime`, pole `pausedUntil` (string) = `"2027-01-01"`.
+- **Co se zastaví:** všechno automatické: sběr článků, ukazatele i AI klasifikace. Dispatcher se dál spouští každých 15 minut, ale hned skončí (1 čtení za běh, zdarma).
+- **Obnovení:** automaticky o půlnoci (pražský čas) daného dne. Dřív smazáním pole nebo změnou data, bez nasazování kódu.
+- **Neplatné datum** (jiný formát než `YYYY-MM-DD`) provoz nezastaví a v logu se objeví varování.
+- Funkce na vyžádání (analýza, briefing; fáze 5 a 6) budou pauzu respektovat také.
+- Po obnovení se ukazatele samy doplní zpětně (ARAD 25 měsíců, ČSÚ, repo). Články z doby pauzy se nedoplní (RSS drží jen pár dní) a historie kurzu EUR/CZK bude mít mezeru.
+
+Kód: [functions/src/runtime.ts](functions/src/runtime.ts).
 
 ### Odhad nákladů na AI (měsíčně)
 
@@ -167,10 +181,20 @@ Embeddingy: Anthropic embedding model nenabízí. Pro dedup a RAG použijeme ext
 - [ ] ARAD dotazovat přes `/updates` jen po změně (teď 1 malý dotaz za 12 h, zatím zbytečné)
 
 ### Fáze 4 – Automatická AI vrstva (~2 týdny)
-- [ ] Klasifikace + extrakce: kritické zdroje ihned, ostatní přes Batch API 2× denně (odeslání a vyzvednutí výsledků řídí dispatcher)
-- [ ] Clustering do událostí, scoring, ověření faktů proti `indicators`
-- [ ] Automatická analýza jen pro události se skóre ≥ 90
-- [ ] Audit `ai_runs` (model, verze promptu, tokeny, cena, čas) a denní limit nákladů
+
+**Změny proti původnímu plánu (31. 10. 2026, podle naměřených dat):**
+- **Bez Batch API.** Reálný objem je ~60 článků denně a klasifikace s extrakcí stojí ~$0,0004 za článek (~$0,7 měsíčně). Batch by ušetřil pár desítek centů, ale přidal by složitost a hodinová zpoždění alertů. Zpracovává se průběžně, max. 20 článků za běh dispatcheru.
+- **Slučování událostí přes Haiku místo embeddingů.** Model dostane události z posledních 72 h a vybere ID shodné události, nebo vrátí „nová“; schéma mu nedovolí vymyslet ID. Bez další služby v GCP, česky. Ověřeno 4/4 na skutečných titulcích (`scripts/match-check.ts`).
+
+- [x] Zpracování ([functions/src/pipeline/process.ts](functions/src/pipeline/process.ts)): text článku (neukládá se) -> klasifikace -> extrakce pro relevance ≥ 40 -> sloučení do události; nerelevantní dokumenty TTL 30 dní; 3 pokusy při chybě
+- [x] Události `events/{id}` (~2,7 kB): titulek a shrnutí od nejprimárnějšího zdroje, fakta kompaktně se zkrácenými citacemi (max. 12), zdroje, skóre, ověření, revize
+- [x] Ověření ([functions/src/pipeline/verify.ts](functions/src/pipeline/verify.ts)): fakta o repo sazbě, inflaci a kurzu se porovnají s ukazateli („ok“/„conflict“); stav události 🟢 primární zdroj / 🔵 více zdrojů / 🟡 sekundární / 🔴 rozpor; skóre = maximum dílčích skóre + důvěryhodnost z ověření
+- [x] Automatická analýza (Opus) jen u skóre ≥ 90, max. 2 za běh
+- [x] „Dnešní top zprávy“ a počet kritických událostí v `dashboard/today` (události za 36 h, skóre ≥ 30)
+- [x] Šetrný audit `aiUsage/{den}` (součty USD, volání, tokenů po modelech) a denní limit $1 pro automatiku
+- [x] Kategorie z klasifikace se filtrují kódem (model občas vrátil hodnotu mimo seznam)
+- [x] Ověřeno proti emulátoru: 133 článků -> 7 událostí, $0,052 celkem; 29 unit testů
+- [ ] Nasazení (`firebase deploy --only functions,firestore`), včetně přepínače pauzy
 
 ### Fáze 5 – UI a analýza na vyžádání (~2–3 týdny)
 - [ ] Dashboard napojený na `dashboard/today`

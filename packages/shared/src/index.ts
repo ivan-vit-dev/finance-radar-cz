@@ -62,6 +62,10 @@ export interface SourceDocument {
   publishedAt: string | null;
   fetchedAt: string;
   status: DocumentStatus;
+  /** Po zpracování AI: */
+  finalScore?: number;
+  eventId?: string;
+  attempts?: number;
 }
 
 export const PEREX_MAX_CHARS = 300;
@@ -76,17 +80,29 @@ export type VerificationStatus =
   | "pending" // 🟠 čeká na ověření
   | "conflict"; // 🔴 rozpor mezi zdroji
 
-export interface Fact {
-  id: string;
-  eventId: string;
-  type: StatementType;
-  statement: string;
-  value?: number;
-  unit?: string;
-  date?: string;
-  sourceDocumentId: string;
-  confidence: number;
-  verification: VerificationStatus;
+/**
+ * Tvrzení u události v kompaktní podobě (šetří místo). Doslovná citace slouží jako
+ * důkaz místo uloženého plného textu článku.
+ */
+export interface EventFact {
+  /** typ tvrzení */
+  t: StatementType;
+  /** tvrzení jednou větou */
+  s: string;
+  /** strojový klíč ukazatele (repo_rate, mortgage_rate_avg…), pokud je */
+  sub?: string;
+  v?: number;
+  u?: string;
+  /** období YYYY-MM-DD / YYYY-MM / YYYY-Qn */
+  per?: string;
+  /** kdo to tvrdí */
+  by?: string;
+  /** doslovná citace (zkrácená) */
+  q: string;
+  /** dokument, ze kterého tvrzení pochází */
+  doc: string;
+  /** výsledek kontroly proti ukazatelům: "ok" = sedí, "conflict" = nesedí */
+  chk?: "ok" | "conflict";
 }
 
 export type ImpactLevel = "high" | "medium" | "low" | "none";
@@ -101,30 +117,44 @@ export interface ScoreInputs {
 
 export type Priority = "critical" | "high" | "important" | "info" | "low";
 
+/** Analýza „pro poradce“ (Opus, na vyžádání nebo automaticky u kritických událostí). */
+export interface EventAnalysis {
+  whatHappened: string;
+  why: string;
+  meaning: string;
+  whoIsAffected: string[];
+  impact: { mortgages: ImpactLevel; consumerLoans: ImpactLevel; realEstate: ImpactLevel; insurance: ImpactLevel; investments: ImpactLevel };
+  whatToWatch: string[];
+  forAdvisor: { label: string; text: string }[];
+  clientExplanation: string;
+  model: string;
+  promptVersion: string;
+  generatedAt: string;
+  /** Revize události, ke které analýza patří. Při změně události se přegeneruje. */
+  revision: number;
+}
+
+/** Událost = jedna věc z jednoho nebo více zdrojů, kolekce `events/{id}`. */
 export interface MarketEvent {
   id: string;
   title: string;
+  summary: string;
   categories: Category[];
+  entities: string[];
   firstSeenAt: string;
   updatedAt: string;
-  sourceDocumentIds: string[];
-  primarySourceId?: string;
+  documentIds: string[];
+  sourceIds: string[];
+  /** Nejlepší (nejnižší) tier mezi zdroji. */
+  bestTier: SourceTier;
   scores: ScoreInputs;
   finalScore: number;
   priority: Priority;
   verification: VerificationStatus;
-  impact: Partial<Record<Category, ImpactLevel>>;
-  analysis?: {
-    whatHappened: string;
-    why: string;
-    meaning: string;
-    whoIsAffected: string[];
-    whatToWatch: string[];
-    forAdvisor: string;
-    model: string;
-    promptVersion: string;
-    generatedAt: string;
-  };
+  facts: EventFact[];
+  /** Zvyšuje se při každé změně (nový zdroj, nová fakta). */
+  revision: number;
+  analysis?: EventAnalysis;
 }
 
 export type Trend = "up" | "down" | "flat";

@@ -1,5 +1,5 @@
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { CATEGORIES } from "@finance-radar/shared";
+import { CATEGORIES, type Category } from "@finance-radar/shared";
 import { z } from "zod";
 import { assertCompleted, claude, costOf, MODELS, type CallCost } from "./claude.js";
 
@@ -10,7 +10,11 @@ const CLASSIFY_TEXT_CHARS = 4_000;
 
 export const ClassificationSchema = z.object({
   isRelevant: z.boolean().describe("Má smysl, aby to finanční poradce vůbec viděl?"),
-  categories: z.array(z.enum(CATEGORIES)).describe("Všechny oblasti, kterých se obsah týká"),
+  // Volný text místo enumu: model občas vrátí hodnotu mimo seznam a celá klasifikace by
+  // pak selhala. Neznámé hodnoty odfiltruje kód (normalizeCategories).
+  categories: z
+    .array(z.string())
+    .describe(`Všechny oblasti, kterých se obsah týká; jen hodnoty z: ${CATEGORIES.join(", ")}`),
   subcategory: z.string().describe("Krátké upřesnění česky, např. 'úrokové sazby', 'refixace', 'DSTI'"),
   contentType: z.enum([
     "decision",
@@ -30,7 +34,7 @@ export const ClassificationSchema = z.object({
   reason: z.string().describe("Jedna věta česky: proč takové hodnocení"),
 });
 
-export type Classification = z.infer<typeof ClassificationSchema>;
+export type Classification = Omit<z.infer<typeof ClassificationSchema>, "categories"> & { categories: Category[] };
 
 const SYSTEM = `Jsi klasifikátor obsahu pro aplikaci Finance Radar. Uživatel je český finanční poradce, který řeší s klienty hypotéky, spotřebitelské úvěry, pojištění a investice. Tvým úkolem je rozhodnout, zda je dokument pro jeho práci důležitý, a ohodnotit ho.
 
@@ -102,11 +106,18 @@ export async function classify(input: ClassifyInput): Promise<ClassifyResult> {
   return { classification: clampScores(response.parsed_output), cost: costOf(MODELS.bulk, response.usage) };
 }
 
-/** Skóre musí být 0–100; schéma rozsah nevynucuje, hlídá ho kód. */
-function clampScores(c: Classification): Classification {
+/** Ponechá jen známé kategorie (bez duplicit). */
+export function normalizeCategories(values: string[]): Category[] {
+  const known = new Set<string>(CATEGORIES);
+  return [...new Set(values.map((v) => v.trim().toLowerCase()).filter((v) => known.has(v)))] as Category[];
+}
+
+/** Skóre musí být 0–100 a kategorie ze seznamu; schéma to nevynucuje, hlídá to kód. */
+function clampScores(c: z.infer<typeof ClassificationSchema>): Classification {
   const clamp = (n: number) => Math.min(100, Math.max(0, Math.round(n)));
   return {
     ...c,
+    categories: normalizeCategories(c.categories),
     relevance: clamp(c.relevance),
     advisorImpact: clamp(c.advisorImpact),
     marketImpact: clamp(c.marketImpact),
