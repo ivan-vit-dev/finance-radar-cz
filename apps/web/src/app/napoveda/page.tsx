@@ -1,9 +1,33 @@
 "use client";
 
-import { MVP_SOURCES, PRIORITY_LABELS, SCORE_WEIGHTS, type Priority, type StatementType } from "@finance-radar/shared";
+import {
+  CATEGORIES,
+  CATEGORY_LABELS,
+  MVP_SOURCES,
+  PRIORITY_LABELS,
+  SCORE_WEIGHTS,
+  type Priority,
+  type StatementType,
+} from "@finance-radar/shared";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
+import { CATEGORY_ICONS, IconBadge } from "@/components/icons";
+import {
+  Bell,
+  ChartColumn,
+  CircleHelp,
+  Cpu,
+  Gauge,
+  Gavel,
+  ListChecks,
+  RefreshCw,
+  Rss,
+  ShieldCheck,
+  Wallet,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 import { PriorityDot, STATEMENT_TYPE, StatementBadge, VERIFICATION } from "@/components/ui";
 
 const PRIORITY_RANGES: { p: Priority; range: string; meaning: string }[] = [
@@ -24,19 +48,20 @@ const INDICATORS = [
   { name: "EUR/CZK", source: "ČNB – kurzy devizového trhu", when: "pracovní dny po 14:30, kontrola každé 3 h" },
 ];
 
-const TOC = [
-  ["jak-to-funguje", "Jak aplikace funguje"],
-  ["obnova", "Jak často se data obnovují"],
-  ["zdroje", "Zdroje"],
-  ["priority", "Barvy a skóre"],
-  ["overeni", "Důvěryhodnost a ověření"],
-  ["tvrzeni", "Fakta, analýzy, odhady, názory"],
-  ["ukazatele", "Tržní ukazatele"],
-  ["legislativa", "Legislativa"],
-  ["ai", "Co dělá AI a co ne"],
-  ["alerty", "Briefing, alerty, instalace"],
-  ["provoz", "Náklady, limity a pauza"],
-] as const;
+const TOC: [string, string, LucideIcon][] = [
+  ["jak-to-funguje", "Jak aplikace funguje", Workflow],
+  ["obnova", "Jak často se data obnovují", RefreshCw],
+  ["zdroje", "Zdroje", Rss],
+  ["priority", "Barvy a skóre", Gauge],
+  ["overeni", "Důvěryhodnost a ověření", ShieldCheck],
+  ["tvrzeni", "Fakta, analýzy, odhady, názory", ListChecks],
+  ["ukazatele", "Tržní ukazatele", ChartColumn],
+  ["legislativa", "Legislativa", Gavel],
+  ["ai", "Co dělá AI a co ne", Cpu],
+  ["alerty", "Briefing, alerty, instalace", Bell],
+  ["provoz", "Náklady, limity a pauza", Wallet],
+];
+const SECTION_ICONS = Object.fromEntries(TOC.map(([id, , icon]) => [id, icon])) as Record<string, LucideIcon>;
 
 const freq = (min: number) => (min >= 60 ? `každé ${min / 60} h` : `každých ${min} min`);
 
@@ -44,7 +69,10 @@ export default function HelpPage() {
   return (
     <AppShell>
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Nápověda</h1>
+        <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
+          <IconBadge icon={CircleHelp} />
+          Nápověda
+        </h1>
         <p className="mt-2 max-w-3xl text-muted">
           Finance Radar každý den sleduje český finanční trh, třídí stovky zpráv, ověřuje je proti primárním zdrojům a
           ukazuje jen to, co je důležité pro práci finančního poradce. Nemusíš číst všechno – potřebuješ vědět, co je
@@ -53,8 +81,9 @@ export default function HelpPage() {
       </header>
 
       <nav className="glass flex flex-wrap gap-x-4 gap-y-2 rounded-2xl p-4 text-sm" aria-label="Obsah nápovědy">
-        {TOC.map(([id, label]) => (
-          <a key={id} href={`#${id}`} className="text-accent-to hover:underline">
+        {TOC.map(([id, label, Icon]) => (
+          <a key={id} href={`#${id}`} className="inline-flex items-center gap-1.5 text-accent-to hover:underline">
+            <Icon size={14} aria-hidden />
             {label}
           </a>
         ))}
@@ -170,6 +199,19 @@ export default function HelpPage() {
           </span>
           . Svítící okraj karty (glow) mají jen kritické a vysoce prioritní události.
         </p>
+        <p className="mt-4 font-medium">Barvy oblastí</p>
+        <p className="mt-1">
+          Každá oblast má svou barvu. V sekci se do ní přebarví celá stránka a u událostí v seznamech podle barvy ikony hned
+          poznáš, čeho se týkají.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          {CATEGORIES.map((c) => (
+            <span key={c} className="inline-flex items-center gap-2 text-sm">
+              <IconBadge icon={CATEGORY_ICONS[c]} size="sm" category={c} />
+              {CATEGORY_LABELS[c]}
+            </span>
+          ))}
+        </div>
       </Section>
 
       <Section id="overeni" title="Důvěryhodnost a ověření">
@@ -307,7 +349,8 @@ export default function HelpPage() {
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-h`} className="glass scroll-mt-6 rounded-2xl p-5 text-sm leading-relaxed">
-      <h2 id={`${id}-h`} className="mb-3 text-lg font-semibold">
+      <h2 id={`${id}-h`} className="mb-3 flex items-center gap-3 text-lg font-semibold">
+        {SECTION_ICONS[id] && <IconBadge icon={SECTION_ICONS[id]} size="sm" />}
         {title}
       </h2>
       {children}

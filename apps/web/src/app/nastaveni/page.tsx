@@ -12,6 +12,8 @@ import { collection, doc, getDoc, onSnapshot, setDoc } from "firebase/firestore"
 import { httpsCallable } from "firebase/functions";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { IconBadge } from "@/components/icons";
+import { Bell, MonitorDown, Settings, SlidersHorizontal } from "lucide-react";
 import { useUser } from "@/components/auth-gate";
 import { SectionTitle } from "@/components/ui";
 import { db, functions } from "@/lib/firebase";
@@ -28,7 +30,10 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Nastavení</h1>
+        <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
+          <IconBadge icon={Settings} />
+          Nastavení
+        </h1>
         <p className="mt-1 text-sm text-muted">Alerty a notifikace platí jen pro tvůj účet.</p>
       </header>
       <NotificationsSection />
@@ -67,7 +72,9 @@ function NotificationsSection() {
 
   return (
     <section aria-labelledby="notif-h" className="glass space-y-4 rounded-2xl p-5">
-      <SectionTitle id="notif-h">Notifikace na tomto zařízení</SectionTitle>
+      <SectionTitle id="notif-h" icon={Bell}>
+        Notifikace na tomto zařízení
+      </SectionTitle>
       {support === "missing-key" && (
         <p className="text-sm text-high">Push notifikace ještě nejsou nastavené (chybí klíč VAPID v konfiguraci webu).</p>
       )}
@@ -173,7 +180,9 @@ function RulesSection() {
 
   return (
     <section aria-labelledby="rules-h" className="glass space-y-5 rounded-2xl p-5">
-      <SectionTitle id="rules-h">Pravidla alertů</SectionTitle>
+      <SectionTitle id="rules-h" icon={SlidersHorizontal}>
+        Pravidla alertů
+      </SectionTitle>
 
       <label className="flex items-center gap-3 text-sm">
         <input type="checkbox" checked={rules.enabled} onChange={(e) => update({ enabled: e.target.checked })} className="size-4 accent-[var(--accent-to)]" />
@@ -254,7 +263,9 @@ function RulesSection() {
 function InstallSection() {
   return (
     <section aria-labelledby="install-h" className="glass space-y-2 rounded-2xl p-5">
-      <SectionTitle id="install-h">Aplikace na ploše</SectionTitle>
+      <SectionTitle id="install-h" icon={MonitorDown}>
+        Aplikace na ploše
+      </SectionTitle>
       <p className="text-sm text-muted">
         V Chrome nebo Edge klikni v adresním řádku na ikonu „Nainstalovat aplikaci“ (případně menu ⋮ → Uložit a sdílet →
         Nainstalovat). Finance Radar se pak otevírá ve vlastním okně a na ikoně ukazuje počet kritických událostí.

@@ -10,6 +10,8 @@ import { collection, getDocs } from "firebase/firestore";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { IconBadge } from "@/components/icons";
+import { CircleCheck, CircleX, FileCheck2, Gavel, Landmark, PenLine, Scale, type LucideIcon } from "lucide-react";
 import { EmptyCard } from "@/components/ui";
 import { db } from "@/lib/firebase";
 
@@ -29,7 +31,16 @@ const STEP_LABELS: Record<(typeof LEGISLATION_PHASES)[number], string> = {
   ucinne: "Účinné",
 };
 
-const czDate = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString("cs-CZ") : "—");
+const PHASE_ICONS: Record<LegislationPhase, LucideIcon> = {
+  snemovna: Landmark,
+  senat: Scale,
+  prezident: PenLine,
+  vyhlaseno: FileCheck2,
+  ucinne: CircleCheck,
+  ukonceno: CircleX,
+};
+
+const czDate =(iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString("cs-CZ") : "—");
 
 function daysUntil(iso: string): number {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
@@ -68,17 +79,23 @@ export default function LegislationPage() {
   }, [items]);
 
   return (
-    <AppShell>
+    <AppShell theme="legislation">
       <header>
         <p className="text-sm text-muted">Zákony relevantní pro finanční poradenství · data Poslanecké sněmovny a e-Sbírky</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight">Legislativa</h1>
+        <h1 className="mt-1 flex items-center gap-3 text-3xl font-semibold tracking-tight">
+          <IconBadge icon={Gavel} />
+          Legislativa
+        </h1>
       </header>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {[...LEGISLATION_PHASES, "ukonceno" as const].map((p) => (
-          <div key={p} className="glass rounded-2xl p-3">
-            <p className="text-xs text-muted">{LEGISLATION_PHASE_LABELS[p]}</p>
-            <p className="mt-1 text-xl font-semibold">{items ? (counts[p] ?? 0) : "…"}</p>
+          <div key={p} className="glass flex items-start gap-2.5 rounded-2xl p-3">
+            <IconBadge icon={PHASE_ICONS[p]} size="sm" tone={p === "ukonceno" ? "muted" : p === "ucinne" ? "info" : "accent"} />
+            <div className="min-w-0">
+              <p className="text-xs text-muted">{LEGISLATION_PHASE_LABELS[p]}</p>
+              <p className="mt-0.5 text-xl font-semibold">{items ? (counts[p] ?? 0) : "…"}</p>
+            </div>
           </div>
         ))}
       </div>

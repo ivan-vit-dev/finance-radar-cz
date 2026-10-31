@@ -5,7 +5,24 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { CATEGORY_ICONS, IconBadge } from "@/components/icons";
 import { db, functions } from "@/lib/firebase";
+import { Coffee, Newspaper, Siren, Target, type LucideIcon } from "lucide-react";
+
+/** Ikona oddílu briefingu podle názvu oblasti, který volí model („ČNB“, „Hypotéky a nemovitosti“…). */
+function areaIcon(area: string): LucideIcon {
+  const a = area.toLowerCase();
+  if (a.includes("čnb") || a.includes("centrální")) return CATEGORY_ICONS.cnb;
+  if (a.includes("hypot")) return CATEGORY_ICONS.mortgages;
+  if (a.includes("nemovit") || a.includes("bydlen")) return CATEGORY_ICONS.real_estate;
+  if (a.includes("úvěr")) return CATEGORY_ICONS.consumer_loans;
+  if (a.includes("pojiš")) return CATEGORY_ICONS.insurance;
+  if (a.includes("regul") || a.includes("legisl") || a.includes("zákon")) return CATEGORY_ICONS.legislation;
+  if (a.includes("invest") || a.includes("trh") || a.includes("spoř")) return CATEGORY_ICONS.markets;
+  if (a.includes("bank")) return CATEGORY_ICONS.banks;
+  if (a.includes("ekonom") || a.includes("inflac")) return CATEGORY_ICONS.economy;
+  return Newspaper;
+}
 
 /** Pražské datum YYYY-MM-DD – stejný klíč jako na backendu. */
 function pragueDate(d = new Date()): string {
@@ -54,8 +71,9 @@ export function BriefingCard() {
   return (
     <section className="glass glow-accent relative overflow-hidden rounded-3xl p-6" aria-labelledby="briefing-h">
       <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-gradient-to-br from-accent-from/40 to-accent-to/30 blur-3xl" />
-      <p className="relative text-sm font-medium text-accent-to">
-        ☕ Briefing {briefing ? <span className="font-normal text-muted">{periodText(briefing)}</span> : null}
+      <p className="relative flex items-center gap-2 text-sm font-medium text-accent-to">
+        <IconBadge icon={Coffee} size="sm" />
+        Briefing {briefing ? <span className="font-normal text-muted">{periodText(briefing)}</span> : null}
       </p>
 
       {error && !briefing && <p className="relative mt-2 text-sm text-muted">Briefing se nepodařilo připravit: {error}</p>}
@@ -80,7 +98,9 @@ export function BriefingCard() {
               href={`/event/${briefing.topStory.eventId}`}
               className="block rounded-2xl bg-surface-strong p-4 ring-1 ring-critical/30 transition hover:ring-critical/60"
             >
-              <p className="text-xs font-medium uppercase tracking-wider text-critical">🔴 Největší událost</p>
+              <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-critical">
+                <Siren size={14} aria-hidden /> Největší událost
+              </p>
               <p className="mt-1 font-medium">{briefing.topStory.title}</p>
               <p className="mt-2 text-sm text-muted">{briefing.topStory.text}</p>
               <p className="mt-2 text-xs text-foreground/80">Co sledovat: {briefing.topStory.watch}</p>
@@ -91,7 +111,10 @@ export function BriefingCard() {
             <div className="grid gap-3 md:grid-cols-2">
               {briefing.sections.map((s) => (
                 <div key={s.area} className="rounded-2xl bg-surface p-4 ring-1 ring-border">
-                  <p className="text-xs font-medium uppercase tracking-wider text-important">🟡 {s.area}</p>
+                  <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-important">
+                    <IconBadge icon={areaIcon(s.area)} size="sm" tone="muted" />
+                    {s.area}
+                  </p>
                   <p className="mt-2 text-sm">{s.text}</p>
                   {s.eventIds.length > 0 && (
                     <p className="mt-2 flex flex-wrap gap-x-3 text-xs">
@@ -109,7 +132,9 @@ export function BriefingCard() {
 
           {briefing.forAdvisor.length > 0 && (
             <div className="rounded-2xl bg-surface-strong p-4 ring-1 ring-accent-from/30">
-              <p className="text-sm font-semibold">🎯 Co je dnes důležité pro poradce</p>
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <Target size={16} className="text-accent-to" aria-hidden /> Co je dnes důležité pro poradce
+              </p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
                 {briefing.forAdvisor.map((f) => (
                   <li key={f}>{f}</li>

@@ -7,6 +7,7 @@ import {
   type StatementType,
   type VerificationStatus,
 } from "@finance-radar/shared";
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 export const PRIORITY_STYLES: Record<Priority, { dot: string; card: string; text: string }> = {
@@ -79,9 +80,10 @@ export function CategoryList({ categories }: { categories: Category[] }) {
   return <>{categories.map((c) => CATEGORY_LABELS[c]).join(" / ")}</>;
 }
 
-export function SectionTitle({ id, children }: { id?: string; children: ReactNode }) {
+export function SectionTitle({ id, children, icon: Icon }: { id?: string; children: ReactNode; icon?: LucideIcon }) {
   return (
-    <h2 id={id} className="mb-3 text-sm font-medium uppercase tracking-wider text-muted">
+    <h2 id={id} className="mb-3 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-muted">
+      {Icon && <Icon size={16} className="text-accent-to" aria-hidden />}
       {children}
     </h2>
   );

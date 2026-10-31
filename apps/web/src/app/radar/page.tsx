@@ -13,7 +13,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { CATEGORY_ICONS, IconBadge } from "@/components/icons";
+import { themeVars } from "@/lib/category-theme";
 import { IndicatorCard, SECTION_INDICATORS } from "@/components/indicator-card";
+import { Clock, Flame, Layers, Newspaper, Radar as RadarIcon, type LucideIcon } from "lucide-react";
 import { CategoryList, EmptyCard, PRIORITY_STYLES, PriorityDot, VerificationBadge } from "@/components/ui";
 import { db } from "@/lib/firebase";
 import { timeAgo } from "@/lib/format";
@@ -35,11 +38,15 @@ type RadarEvent = Pick<
 
 export default function RadarPage() {
   return (
-    <AppShell>
-      <Suspense fallback={<p className="text-sm text-muted">Načítám…</p>}>
-        <Radar />
-      </Suspense>
-    </AppShell>
+    <Suspense
+      fallback={
+        <AppShell>
+          <p className="text-sm text-muted">Načítám…</p>
+        </AppShell>
+      }
+    >
+      <Radar />
+    </Suspense>
   );
 }
 
@@ -90,10 +97,13 @@ function Radar() {
   const setCategory = (c: Category | null) => router.replace(c ? `/radar?c=${c}` : "/radar");
 
   return (
-    <>
+    <AppShell theme={category}>
       <header>
         <p className="text-sm text-muted">Události za posledních {DAYS} dní</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight">{category ? CATEGORY_LABELS[category] : "Radar"}</h1>
+        <h1 className="mt-1 flex items-center gap-3 text-3xl font-semibold tracking-tight">
+          <IconBadge icon={category ? CATEGORY_ICONS[category] : RadarIcon} />
+          {category ? CATEGORY_LABELS[category] : "Radar"}
+        </h1>
       </header>
 
       {sectionIndicators.length > 0 && (
@@ -106,11 +116,11 @@ function Radar() {
 
       <div className="glass flex flex-col gap-3 rounded-2xl p-4">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Kategorie">
-          <Chip active={!category} onClick={() => setCategory(null)}>
+          <Chip active={!category} onClick={() => setCategory(null)} icon={Layers}>
             Všechny oblasti
           </Chip>
           {CATEGORIES.map((c) => (
-            <Chip key={c} active={category === c} onClick={() => setCategory(c)}>
+            <Chip key={c} active={category === c} onClick={() => setCategory(c)} icon={CATEGORY_ICONS[c]} theme={c}>
               {CATEGORY_LABELS[c]}
             </Chip>
           ))}
@@ -122,10 +132,10 @@ function Radar() {
             </Chip>
           ))}
           <span className="mx-1 hidden h-4 w-px bg-border sm:block" />
-          <Chip active={sortBy === "time"} onClick={() => setSortBy("time")}>
+          <Chip active={sortBy === "time"} onClick={() => setSortBy("time")} icon={Clock}>
             Nejnovější
           </Chip>
-          <Chip active={sortBy === "score"} onClick={() => setSortBy("score")}>
+          <Chip active={sortBy === "score"} onClick={() => setSortBy("score")} icon={Flame}>
             Nejdůležitější
           </Chip>
         </div>
@@ -145,8 +155,14 @@ function Radar() {
               className={`glass block rounded-2xl p-4 transition hover:bg-surface-strong ${PRIORITY_STYLES[ev.priority].card}`}
             >
               <div className="flex items-start gap-3">
-                <span className="mt-1.5">
-                  <PriorityDot priority={ev.priority} />
+                <span className="relative">
+                  <IconBadge
+                    icon={ev.categories[0] ? CATEGORY_ICONS[ev.categories[0]] : Newspaper}
+                    category={primaryCategory(ev.categories, category)}
+                  />
+                  <span className="absolute -right-0.5 -top-0.5">
+                    <PriorityDot priority={ev.priority} />
+                  </span>
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
@@ -171,22 +187,43 @@ function Radar() {
           </li>
         ))}
       </ul>
-    </>
+    </AppShell>
   );
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+/** Barva ikony události: v sekci její barva (když do ní událost patří), jinak první oblast události. */
+function primaryCategory(categories: Category[], section: Category | null): Category | null {
+  if (section && categories.includes(section)) return section;
+  return categories[0] ?? null;
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+  icon: Icon,
+  theme,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  icon?: LucideIcon;
+  /** Oblast – filtr má její barvy (funguje i jako barevná legenda). */
+  theme?: Category;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full px-3 py-1 text-xs transition ${
+      style={themeVars(theme)}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs transition ${
         active
           ? "bg-gradient-to-r from-accent-from/80 to-accent-to/80 text-white shadow-[0_0_16px_-4px_var(--accent-glow)]"
           : "bg-surface text-muted ring-1 ring-border hover:text-foreground"
       }`}
     >
+      {Icon && <Icon size={13} aria-hidden className={!active && theme ? "text-accent-to" : undefined} />}
       {children}
     </button>
   );

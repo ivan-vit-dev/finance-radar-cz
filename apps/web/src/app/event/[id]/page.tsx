@@ -28,6 +28,16 @@ import {
   VerificationBadge,
 } from "@/components/ui";
 import { db, functions } from "@/lib/firebase";
+import {
+  Briefcase,
+  ChevronLeft,
+  Lightbulb,
+  Link2,
+  ListChecks,
+  MessageCircle,
+  Sparkles,
+  Tags,
+} from "lucide-react";
 import { formatNumber, formatPeriod, timeAgo } from "@/lib/format";
 
 type AnalysisState =
@@ -66,11 +76,7 @@ const AFFECTED: Record<string, string> = {
 const sourceName = (id: string) => MVP_SOURCES.find((s) => s.id === id)?.name ?? id;
 
 export default function EventPage() {
-  return (
-    <AppShell>
-      <EventDetail />
-    </AppShell>
-  );
+  return <EventDetail />;
 }
 
 function EventDetail() {
@@ -110,8 +116,20 @@ function EventDetail() {
       .catch((e: { message?: string }) => setAnalysisState({ kind: "error", message: e.message ?? String(e) }));
   }, [event]);
 
-  if (event === undefined) return <p className="text-sm text-muted">Načítám událost…</p>;
-  if (event === null) return <EmptyCard text="Událost neexistuje nebo byla odstraněna." />;
+  if (event === undefined) {
+    return (
+      <AppShell>
+        <p className="text-sm text-muted">Načítám událost…</p>
+      </AppShell>
+    );
+  }
+  if (event === null) {
+    return (
+      <AppShell>
+        <EmptyCard text="Událost neexistuje nebo byla odstraněna." />
+      </AppShell>
+    );
+  }
 
   const analysisCurrent = event.analysis?.revision === event.revision;
   const factsByType = TYPE_ORDER.map((t) => ({ type: t, facts: event.facts.filter((f) => f.t === t) })).filter(
@@ -119,9 +137,10 @@ function EventDetail() {
   );
 
   return (
-    <>
+    <AppShell theme={event.categories[0]}>
       <Link href="/radar" className="text-xs text-accent-to hover:underline">
-        ← Zpět na radar
+        <ChevronLeft size={14} className="-ml-0.5 inline" aria-hidden />
+        Zpět na radar
       </Link>
 
       <header className={`glass rounded-3xl p-6 ${PRIORITY_STYLES[event.priority].card}`}>
@@ -143,7 +162,9 @@ function EventDetail() {
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
           <section aria-labelledby="analysis-h">
-            <SectionTitle id="analysis-h">Analýza pro poradce</SectionTitle>
+            <SectionTitle id="analysis-h" icon={Sparkles}>
+              Analýza pro poradce
+            </SectionTitle>
             {event.analysis ? (
               <AnalysisView analysis={event.analysis} stale={!analysisCurrent} eventId={event.id} />
             ) : analysisState.kind === "error" ? (
@@ -159,7 +180,9 @@ function EventDetail() {
           <ExplainSimply event={event} />
 
           <section aria-labelledby="facts-h">
-            <SectionTitle id="facts-h">Tvrzení a jejich zdroje</SectionTitle>
+            <SectionTitle id="facts-h" icon={ListChecks}>
+              Tvrzení a jejich zdroje
+            </SectionTitle>
             <div className="space-y-4">
               {factsByType.map((g) => (
                 <ul key={g.type} className="glass divide-y divide-border rounded-2xl">
@@ -174,7 +197,9 @@ function EventDetail() {
 
         <aside className="space-y-6">
           <section aria-labelledby="sources-h">
-            <SectionTitle id="sources-h">Zdroje ({event.sourceIds.length})</SectionTitle>
+            <SectionTitle id="sources-h" icon={Link2}>
+              Zdroje ({event.sourceIds.length})
+            </SectionTitle>
             <ul className="glass divide-y divide-border rounded-2xl">
               {docs.map((d) => (
                 <li key={d.id} className="p-4">
@@ -213,7 +238,9 @@ function EventDetail() {
 
           {event.entities.length > 0 && (
             <section aria-labelledby="entities-h">
-              <SectionTitle id="entities-h">Týká se</SectionTitle>
+              <SectionTitle id="entities-h" icon={Tags}>
+                Týká se
+              </SectionTitle>
               <div className="flex flex-wrap gap-2">
                 {event.entities.map((e) => (
                   <span key={e} className="rounded-full bg-surface px-3 py-1 text-xs text-muted ring-1 ring-border">
@@ -225,7 +252,7 @@ function EventDetail() {
           )}
         </aside>
       </div>
-    </>
+    </AppShell>
   );
 }
 
@@ -292,7 +319,9 @@ function AnalysisView({ analysis, stale, eventId }: { analysis: EventAnalysis; s
       </div>
 
       <div className="rounded-xl bg-surface-strong p-4 ring-1 ring-accent-from/30">
-        <h3 className="text-sm font-semibold">👨‍💼 Co to znamená pro poradce</h3>
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <Briefcase size={16} className="text-accent-to" aria-hidden /> Co to znamená pro poradce
+        </h3>
         <ul className="mt-3 space-y-2 text-sm">
           {analysis.forAdvisor.map((f) => (
             <li key={f.label + f.text}>
@@ -303,7 +332,9 @@ function AnalysisView({ analysis, stale, eventId }: { analysis: EventAnalysis; s
       </div>
 
       <div className="rounded-xl bg-surface p-4 ring-1 ring-border">
-        <h3 className="text-sm font-semibold">💬 Jak to vysvětlit klientovi</h3>
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <MessageCircle size={16} className="text-accent-to" aria-hidden /> Jak to vysvětlit klientovi
+        </h3>
         <p className="mt-2 text-sm">{analysis.clientExplanation}</p>
         <p className="mt-2 text-xs text-muted">Komunikační pomůcka, ne finanční doporučení.</p>
       </div>
@@ -328,7 +359,8 @@ function ExplainSimply({ event }: { event: MarketEvent }) {
     return (
       <section aria-labelledby="explain-h" className="glass rounded-2xl p-5">
         <h2 id="explain-h" className="text-sm font-semibold">
-          🤖 Jednoduše vysvětleno
+          <Lightbulb size={16} className="mr-1.5 inline text-important" aria-hidden />
+          Jednoduše vysvětleno
         </h2>
         <p className="mt-2 text-sm leading-relaxed">{current.text}</p>
         <p className="mt-2 text-xs text-muted">AI vysvětlení obecných pojmů ({current.model}), fakta ověřuj ve zdrojích.</p>
@@ -353,7 +385,8 @@ function ExplainSimply({ event }: { event: MarketEvent }) {
         }}
         className="rounded-xl bg-surface-strong px-4 py-2 text-sm ring-1 ring-border transition hover:ring-accent-to disabled:opacity-60"
       >
-        {state === "loading" ? "Vysvětluji…" : "🤖 Vysvětli jednoduše"}
+        <Lightbulb size={16} className={`mr-1.5 inline text-important ${state === "loading" ? "animate-pulse" : ""}`} aria-hidden />
+        {state === "loading" ? "Vysvětluji…" : "Vysvětli jednoduše"}
       </button>
       {state === "error" && <span className="text-sm text-critical">{message}</span>}
     </div>

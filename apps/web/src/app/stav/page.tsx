@@ -14,6 +14,22 @@ import {
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { IconBadge } from "@/components/icons";
+import {
+  Activity,
+  ChartColumn,
+  CircleCheck,
+  CircleX,
+  Database,
+  Hourglass,
+  Layers,
+  Power,
+  Rss,
+  Trash2,
+  TriangleAlert,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { EmptyCard, SectionTitle } from "@/components/ui";
 import { db } from "@/lib/firebase";
 import { formatNumber, formatPeriod, timeAgo } from "@/lib/format";
@@ -111,19 +127,24 @@ export default function StatusPage() {
   return (
     <AppShell>
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight">Stav systému</h1>
+        <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight">
+          <IconBadge icon={Activity} />
+          Stav systému
+        </h1>
         <p className="mt-1 text-sm text-muted">Sběr dat, ukazatele a útrata za AI. Data se načetla při otevření stránky.</p>
       </header>
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <Stat label="Provoz" value={pausedUntil ? `pozastaven do ${pausedUntil}` : pausedUntil === null ? "běží" : "…"} tone={pausedUntil ? "warn" : "ok"} />
-        <Stat label="Problémy" value={loadedAt ? String(problems) : "…"} tone={problems ? "warn" : "ok"} />
-        <Stat label="AI tento měsíc" value={`$${formatNumber(monthUsd, 2)}`} tone="ok" />
-        <Stat label="Události / články" value={counts.events !== undefined ? `${counts.events} / ${(counts.classified ?? 0) + (counts.discarded ?? 0) + (counts.pending ?? 0)}` : "…"} tone="ok" />
+        <Stat icon={Power} label="Provoz" value={pausedUntil ? `pozastaven do ${pausedUntil}` : pausedUntil === null ? "běží" : "…"} tone={pausedUntil ? "warn" : "ok"} />
+        <Stat icon={TriangleAlert} label="Problémy" value={loadedAt ? String(problems) : "…"} tone={problems ? "warn" : "ok"} />
+        <Stat icon={Wallet} label="AI tento měsíc" value={`$${formatNumber(monthUsd, 2)}`} tone="ok" />
+        <Stat icon={Layers} label="Události / články" value={counts.events !== undefined ? `${counts.events} / ${(counts.classified ?? 0) + (counts.discarded ?? 0) + (counts.pending ?? 0)}` : "…"} tone="ok" />
       </div>
 
       <section aria-labelledby="sources-h">
-        <SectionTitle id="sources-h">Zdroje ({sources.length})</SectionTitle>
+        <SectionTitle id="sources-h" icon={Rss}>
+          Zdroje ({sources.length})
+        </SectionTitle>
         <div className="glass overflow-x-auto rounded-2xl">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="text-left text-xs text-muted">
@@ -158,7 +179,9 @@ export default function StatusPage() {
       </section>
 
       <section aria-labelledby="ind-h">
-        <SectionTitle id="ind-h">Ukazatele</SectionTitle>
+        <SectionTitle id="ind-h" icon={ChartColumn}>
+          Ukazatele
+        </SectionTitle>
         <div className="glass overflow-x-auto rounded-2xl">
           <table className="w-full min-w-[560px] text-sm">
             <thead className="text-left text-xs text-muted">
@@ -195,7 +218,9 @@ export default function StatusPage() {
       </section>
 
       <section aria-labelledby="ai-h">
-        <SectionTitle id="ai-h">Útrata za AI (posledních 30 dní)</SectionTitle>
+        <SectionTitle id="ai-h" icon={Wallet}>
+          Útrata za AI (posledních 30 dní)
+        </SectionTitle>
         <div className="glass space-y-2 rounded-2xl p-4">
           {usage.length === 0 && <p className="text-sm text-muted">Zatím žádná volání.</p>}
           {usage.map((u) => (
@@ -220,23 +245,28 @@ export default function StatusPage() {
       </section>
 
       <section aria-labelledby="docs-h">
-        <SectionTitle id="docs-h">Články v databázi</SectionTitle>
+        <SectionTitle id="docs-h" icon={Database}>
+          Články v databázi
+        </SectionTitle>
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-          <Stat label="Čeká na zpracování" value={String(counts.pending ?? "…")} tone="ok" />
-          <Stat label="Zařazeno do událostí" value={String(counts.classified ?? "…")} tone="ok" />
-          <Stat label="Nerelevantní (smažou se po 30 dnech)" value={String(counts.discarded ?? "…")} tone="ok" />
-          <Stat label="Chyba zpracování" value={String(counts.error ?? "…")} tone={counts.error ? "warn" : "ok"} />
+          <Stat icon={Hourglass} label="Čeká na zpracování" value={String(counts.pending ?? "…")} tone="ok" />
+          <Stat icon={CircleCheck} label="Zařazeno do událostí" value={String(counts.classified ?? "…")} tone="ok" />
+          <Stat icon={Trash2} label="Nerelevantní (smažou se po 30 dnech)" value={String(counts.discarded ?? "…")} tone="ok" />
+          <Stat icon={CircleX} label="Chyba zpracování" value={String(counts.error ?? "…")} tone={counts.error ? "warn" : "ok"} />
         </div>
       </section>
     </AppShell>
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone: Health }) {
+function Stat({ label, value, tone, icon }: { label: string; value: string; tone: Health; icon: LucideIcon }) {
   return (
-    <div className="glass rounded-2xl p-4">
-      <p className="text-xs text-muted">{label}</p>
-      <p className={`mt-1 text-lg font-semibold ${tone === "ok" ? "" : HEALTH[tone].className}`}>{value}</p>
+    <div className="glass flex items-start gap-3 rounded-2xl p-4">
+      <IconBadge icon={icon} size="sm" tone={tone === "ok" ? "accent" : tone === "warn" ? "high" : "critical"} />
+      <div className="min-w-0">
+        <p className="text-xs text-muted">{label}</p>
+        <p className={`mt-1 text-lg font-semibold ${tone === "ok" ? "" : HEALTH[tone].className}`}>{value}</p>
+      </div>
     </div>
   );
 }
