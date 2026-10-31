@@ -1,11 +1,19 @@
 "use client";
 
-import { CATEGORIES, CATEGORY_LABELS, PRIORITY_LABELS, type Category, type MarketEvent } from "@finance-radar/shared";
-import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import {
+  CATEGORIES,
+  CATEGORY_LABELS,
+  PRIORITY_LABELS,
+  type Category,
+  type DashboardSnapshot,
+  type MarketEvent,
+} from "@finance-radar/shared";
+import { collection, doc, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { IndicatorCard, SECTION_INDICATORS } from "@/components/indicator-card";
 import { CategoryList, EmptyCard, PRIORITY_STYLES, PriorityDot, VerificationBadge } from "@/components/ui";
 import { db } from "@/lib/firebase";
 import { timeAgo } from "@/lib/format";
@@ -43,6 +51,19 @@ function Radar() {
   const [sortBy, setSortBy] = useState<"time" | "score">("time");
   const [events, setEvents] = useState<RadarEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [indicators, setIndicators] = useState<DashboardSnapshot["indicators"]>([]);
+
+  // Ukazatele k sekci se berou z předpočítaného dashboardu (1 čtení).
+  useEffect(
+    () =>
+      onSnapshot(doc(db, "dashboard", "today"), (s) =>
+        setIndicators((s.data() as DashboardSnapshot | undefined)?.indicators ?? []),
+      ),
+    [],
+  );
+  const sectionIndicators = (category ? (SECTION_INDICATORS[category] ?? []) : [])
+    .map((id) => indicators.find((i) => i.id === id))
+    .filter((i): i is DashboardSnapshot["indicators"][number] => !!i);
 
   useEffect(() => {
     const since = new Date(Date.now() - DAYS * 86_400_000).toISOString();
@@ -74,6 +95,14 @@ function Radar() {
         <p className="text-sm text-muted">Události za posledních {DAYS} dní</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">{category ? CATEGORY_LABELS[category] : "Radar"}</h1>
       </header>
+
+      {sectionIndicators.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+          {sectionIndicators.map((ind) => (
+            <IndicatorCard key={ind.id} ind={ind} />
+          ))}
+        </div>
+      )}
 
       <div className="glass flex flex-col gap-3 rounded-2xl p-4">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Kategorie">

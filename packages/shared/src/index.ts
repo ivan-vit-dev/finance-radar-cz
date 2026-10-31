@@ -31,6 +31,11 @@ export interface Source {
   frequencyMinutes: number;
   categories: Category[];
   enabled: boolean;
+  /**
+   * Jen pro kind "html": regulární výraz pro odkazy na články na stránce se seznamem
+   * (zdroje bez RSS, např. tiskové zprávy ČAP).
+   */
+  linkPattern?: string;
 }
 
 /** Provozní stav zdroje, kolekce `sourceState/{sourceId}`. Konfigurace zdroje je v kódu. */
@@ -348,7 +353,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   insurance: "Pojištění",
   economy: "Ekonomika",
   legislation: "Legislativa",
-  markets: "Finanční trh",
+  markets: "Investice a spoření",
 };
 
 function clamp(n: number, min: number, max: number): number {

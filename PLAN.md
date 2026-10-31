@@ -18,7 +18,8 @@ Produktová specifikace: [specs.md](specs.md). Tento dokument popisuje, **jak** 
 2. ~~Fáze 3~~ nasazeno 31. 10. 2026, dashboard ukazuje 6 ukazatelů.
 3. ~~Fáze 4~~ nasazeno 31. 10. 2026 odpoledne, zpracovává frontu (20 článků za běh).
 4. ~~Fáze 5~~ nasazeno 31. 10. 2026 (backend), web nasazuje vlastník.
-5. **Fáze 6:** briefing a alerty hotové (31. 10. 2026). Čeká na klíč VAPID, adresu webu (`APP_URL`) a nasazení.
+5. ~~Fáze 6~~ nasazeno 31. 10. 2026, vlastník ověřil, že vše funguje.
+6. **Sekce Úvěry, Pojištění, Investice** (31. 10. 2026): 4 nové zdroje (ČAP přes nový HTML collector, oPojištění, Peníze.cz, Investujeme.cz), ukazatel sazby spořicích účtů, ukazatele nad každou sekcí. Zbývá nasadit.
 
 Rozhodnuto 30. 10. 2026: retence zůstává (nerelevantní dokumenty TTL 30 dní, relevantní se zatím nemažou). Zkrácení na 7/90 dní je možné, ale z hlediska nákladů zbytečné (~15–20 MB ročně).
 

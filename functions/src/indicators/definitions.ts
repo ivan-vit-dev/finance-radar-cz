@@ -137,6 +137,22 @@ export const INDICATORS: IndicatorDef[] = [
     trendLabel: "sazby úvěrů",
     fetch: aradSeries(ARAD_SERIES.consumerLoanRateNew),
   },
+  {
+    id: "savings_rate",
+    label: "Sazba spořicích účtů",
+    unit: "%",
+    decimals: 2,
+    source: "ČNB ARAD",
+    category: "markets",
+    mode: "pb",
+    changeLabel: "m/m",
+    checkEveryHours: 12,
+    keep: 25,
+    trendLookback: 3,
+    trendThreshold: 0.1,
+    trendLabel: "sazby spoření",
+    fetch: aradSeries(ARAD_SERIES.savingsDepositRate),
+  },
 ];
 
 /** Kontext s líným (jednorázovým) stažením všech potřebných řad z ARAD. */

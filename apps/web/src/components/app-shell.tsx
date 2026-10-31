@@ -18,7 +18,10 @@ const NAV: NavItem[] = [
   { label: "Radar", href: "/radar" },
   { label: "ČNB", href: "/radar?c=cnb" },
   { label: "Hypotéky", href: "/radar?c=mortgages" },
+  { label: "Úvěry", href: "/radar?c=consumer_loans" },
   { label: "Nemovitosti", href: "/radar?c=real_estate" },
+  { label: "Pojištění", href: "/radar?c=insurance" },
+  { label: "Investice", href: "/radar?c=markets" },
   { label: "Legislativa", href: "/radar?c=legislation" },
   { label: "Nastavení", href: "/nastaveni" },
 ];

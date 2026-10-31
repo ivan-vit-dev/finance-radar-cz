@@ -116,6 +116,23 @@ Přehled všech kanálů MF: `https://mf.gov.cz/cs/rss`.
 
 Frekvence médií: 15–30 min. Seznam Zprávy a Novinky mají jen celkový kanál, ne ekonomický, takže v nich bude víc šumu a klasifikátor (Haiku) ho musí odfiltrovat.
 
+## Úvěry, pojištění, investice (přidáno 31. 10. 2026)
+
+Důvod: sekce Úvěry, Pojištění a Investice měly z původních zdrojů 0, 0 a 3 události.
+
+| Zdroj | Typ | URL | Tier / priorita | Stav | Poznámka |
+|---|---|---|---|---|---|
+| ČAP – tiskové zprávy | HTML (seznam) | `https://www.cap.cz/tiskove-centrum/tiskove-zpravy` | 1 / 95 | ✅ | bez RSS; HTML collector bere odkazy `/tiskove-centrum/tiskove-zpravy/<číslo>-…`, datum stránka strojově neuvádí |
+| oPojištění.cz | RSS | `https://www.opojisteni.cz/rss/` | 2 / 75 | ✅ | specializovaný portál o pojišťovnictví |
+| Peníze.cz | RSS | `https://www.penize.cz/rss` | 2 / 75 | ✅ | osobní finance: úvěry, pojištění, investice |
+| Investujeme.cz | RSS | `https://www.investujeme.cz/rss/` | 3 / 50 | ✅ | provozuje Swiss Life (finanční firma), proto jen sekundární |
+| Kurzy.cz | RSS | `https://www.kurzy.cz/zpravy/util/forext.dat?type=rss` | – | ⚠️ nezapnuto | ~50 zpráv za pár hodin, hodně šumu (kultura, armáda); +$2,5/měs. za klasifikaci |
+| ČLFA, Finanční arbitr, AKAT | – | – | – | ❌ | RSS nenalezeno |
+
+Ukazatel pro sekci Investice: **sazba spořicích účtů** (ARAD `SMIRNOOBVKMIRS405CZK1`).
+
+Kontrola zdrojů skutečnými collectory (nic nezapisuje): `npx tsx scripts/sources-check.ts [id …]` ve složce `functions`.
+
 ## Zatím neinventarizováno (po MVP-0)
 
 - **Banky** (ČS, ČSOB, KB, RB, UniCredit, MONETA, Air Bank, Fio, mBank, Trinity): tiskové zprávy a sazebníky, typicky HTML bez RSS.

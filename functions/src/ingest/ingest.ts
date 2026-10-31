@@ -6,6 +6,7 @@ import {
   type SourceState,
 } from "@finance-radar/shared";
 import type { Firestore } from "firebase-admin/firestore";
+import { fetchHtmlList } from "../collectors/html-list.js";
 import { fetchFeed, type FeedItem } from "../collectors/rss.js";
 import { MVP_SOURCES } from "../sources.js";
 import { canonicalUrl, urlId } from "./url.js";
@@ -76,7 +77,7 @@ export function selectNewDocuments(
  * Čtení: 1 dokument stavu na zdroj. Zápisy: nové dokumenty + 1 stav na zdroj.
  */
 export async function runIngestion(db: Firestore, now = new Date(), sources = MVP_SOURCES): Promise<SourceRunResult[]> {
-  const enabled = sources.filter((s) => s.enabled && s.kind === "rss");
+  const enabled = sources.filter((s) => s.enabled && (s.kind === "rss" || (s.kind === "html" && s.linkPattern)));
   const stateRefs = enabled.map((s) => db.collection("sourceState").doc(s.id));
   const snaps = stateRefs.length ? await db.getAll(...stateRefs) : [];
 
@@ -86,7 +87,8 @@ export async function runIngestion(db: Firestore, now = new Date(), sources = MV
       if (!isDue(source, state, now)) return { sourceId: source.id, status: "skipped" };
 
       try {
-        const items = await fetchFeed(source.url);
+        const items =
+          source.kind === "html" ? await fetchHtmlList(source.url, source.linkPattern!) : await fetchFeed(source.url);
         const candidates = selectNewDocuments(source, items, new Set(state.seen), now);
         // Stejný článek mohl přijít už z jiného zdroje – čtou se jen nové kandidáty, ne celý kanál.
         const refs = candidates.map((d) => db.collection("documents").doc(d.id));

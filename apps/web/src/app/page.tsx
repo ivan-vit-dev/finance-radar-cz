@@ -14,8 +14,8 @@ import {
   SectionTitle,
   VerificationBadge,
 } from "@/components/ui";
+import { IndicatorCard } from "@/components/indicator-card";
 import { db } from "@/lib/firebase";
-import { formatNumber, formatPeriod } from "@/lib/format";
 
 const TREND_ICON: Record<Trend, string> = { up: "↑", down: "↓", flat: "→" };
 
@@ -82,24 +82,7 @@ export default function DashboardPage() {
         <SectionTitle id="indicators-h">Tržní ukazatele</SectionTitle>
         <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
           {snapshot?.indicators?.length
-            ? snapshot.indicators.map((ind) => (
-                <div key={ind.id} className="glass rounded-2xl p-4">
-                  <p className="text-sm text-muted">{ind.label}</p>
-                  <p className="mt-2 font-mono text-2xl font-semibold tabular-nums">
-                    {formatNumber(ind.value, ind.decimals)} <span className="text-base text-muted">{ind.unit}</span>
-                  </p>
-                  <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted">
-                    {ind.change !== undefined && (
-                      <span className="text-foreground/80">
-                        {ind.change > 0 ? "↑ +" : ind.change < 0 ? "↓ " : "→ "}
-                        {formatNumber(ind.change, ind.changeUnit === "%" ? 1 : 2)} {ind.changeUnit}
-                        {ind.changeLabel ? ` ${ind.changeLabel}` : ""}
-                      </span>
-                    )}
-                    <span>{formatPeriod(ind.asOf)}</span>
-                  </p>
-                </div>
-              ))
+            ? snapshot.indicators.map((ind) => <IndicatorCard key={ind.id} ind={ind} />)
             : PLACEHOLDER_INDICATORS.map((label) => (
                 <div key={label} className="glass rounded-2xl p-4">
                   <p className="text-sm text-muted">{label}</p>
