@@ -3,8 +3,8 @@ import { getFirestore } from "firebase-admin/firestore";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onCall } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { handleAnalyzeEvent } from "./callable.js";
-import { defineSecret } from "firebase-functions/params";
+import { handleAnalyzeEvent, handleGetBriefing, handleSendTestNotification } from "./callable.js";
+import { defineSecret, defineString } from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import { runIndicators } from "./indicators/update.js";
 import { runIngestion } from "./ingest/ingest.js";
@@ -17,6 +17,8 @@ setGlobalOptions({ region: "europe-west3", maxInstances: 2 });
 
 export const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 export const cnbAradApiKey = defineSecret("CNB_ARAD_API_KEY");
+/** Adresa webu pro odkazy v push notifikacích (functions/.env), např. https://finance-radar-cz.vercel.app */
+export const appUrl = defineString("APP_URL", { default: "" });
 
 /**
  * Jediný naplánovaný job (Cloud Scheduler má zdarma jen 3 joby).
@@ -47,7 +49,10 @@ export const dispatcher = onSchedule(
 
     // AI zpracování až po stažení, aby zahrnulo i nejnovější články.
     process.env.ANTHROPIC_API_KEY = anthropicApiKey.value();
-    const processing = await runProcessing(db);
+    const processing = await runProcessing(db, new Date(), {
+      sendAlerts: true,
+      appUrl: appUrl.value().replace(/\/+$/, ""),
+    });
 
     const ran = ingestion.filter((r) => r.status !== "skipped");
     const saved = ran.reduce((s, r) => s + (r.saved ?? 0), 0);
@@ -73,4 +78,18 @@ export const analyzeEvent = onCall(
     process.env.ANTHROPIC_API_KEY = anthropicApiKey.value();
     return handleAnalyzeEvent(getFirestore(), request.auth?.uid, (request.data as { eventId?: unknown })?.eventId);
   },
+);
+
+/** Briefing při prvním otevření aplikace v daný den (Opus). Viz callable.ts. */
+export const getBriefing = onCall(
+  { secrets: [anthropicApiKey], timeoutSeconds: 180, memory: "512MiB", maxInstances: 2 },
+  async (request) => {
+    process.env.ANTHROPIC_API_KEY = anthropicApiKey.value();
+    return handleGetBriefing(getFirestore(), request.auth?.uid);
+  },
+);
+
+/** Zkušební push notifikace z nastavení. */
+export const sendTestNotification = onCall({ maxInstances: 1 }, async (request) =>
+  handleSendTestNotification(getFirestore(), request.auth?.uid, appUrl.value().replace(/\/+$/, "")),
 );

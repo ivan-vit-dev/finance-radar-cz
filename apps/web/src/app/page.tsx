@@ -5,6 +5,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { BriefingCard } from "@/components/briefing-card";
 import {
   CategoryList,
   EmptyCard,
@@ -51,6 +52,13 @@ export default function DashboardPage() {
     [],
   );
 
+  // Počet kritických událostí na ikoně nainstalované aplikace (Chrome/Edge).
+  const critical = snapshot?.criticalCount ?? 0;
+  useEffect(() => {
+    if (!("setAppBadge" in navigator)) return;
+    (critical > 0 ? navigator.setAppBadge(critical) : navigator.clearAppBadge()).catch(() => {});
+  }, [critical]);
+
   const today = now.toLocaleDateString("cs-CZ", {
     weekday: "long",
     day: "numeric",
@@ -68,18 +76,7 @@ export default function DashboardPage() {
         <CriticalBadge count={snapshot?.criticalCount ?? 0} />
       </header>
 
-      <section className="glass glow-accent relative overflow-hidden rounded-3xl p-6">
-        <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-gradient-to-br from-accent-from/40 to-accent-to/30 blur-3xl" />
-        <p className="text-sm font-medium text-accent-to">☕ Morning Briefing</p>
-        <h2 className="mt-2 text-xl font-semibold">
-          {snapshot ? "Briefing zatím připravujeme" : "Zatím nemáme žádná data"}
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted">
-          {snapshot
-            ? `Data aktualizována ${new Date(snapshot.updatedAt).toLocaleString("cs-CZ")}. Ranní shrnutí přibude brzy; mezitím najdeš důležité události níže a v Radaru.`
-            : "Jakmile poběží sběr dat a AI pipeline, uvidíš tu nejdůležitější události dne, ověřená fakta a co z nich plyne pro tvou práci s klienty."}
-        </p>
-      </section>
+      <BriefingCard />
 
       <section aria-labelledby="indicators-h">
         <SectionTitle id="indicators-h">Tržní ukazatele</SectionTitle>

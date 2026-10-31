@@ -17,8 +17,8 @@ Produktová specifikace: [specs.md](specs.md). Tento dokument popisuje, **jak** 
 1. ~~Zkontrolovat noční ingestion~~ Ověřeno 31. 10. 2026: 146 dokumentů, všech 8 zdrojů bez chyb. (`firebase functions:log` umí jen omezený počet záznamů; stav zdrojů je spolehlivěji vidět ve Firestore `sourceState`.)
 2. ~~Fáze 3~~ nasazeno 31. 10. 2026, dashboard ukazuje 6 ukazatelů.
 3. ~~Fáze 4~~ nasazeno 31. 10. 2026 odpoledne, zpracovává frontu (20 článků za běh).
-4. **Fáze 5:** radar, detail události a analýza na vyžádání hotové (31. 10. 2026), zbývá nasadit funkce a web.
-5. **Fáze 6:** briefing při prvním otevření dne, push alerty.
+4. ~~Fáze 5~~ nasazeno 31. 10. 2026 (backend), web nasazuje vlastník.
+5. **Fáze 6:** briefing a alerty hotové (31. 10. 2026). Čeká na klíč VAPID, adresu webu (`APP_URL`) a nasazení.
 
 Rozhodnuto 30. 10. 2026: retence zůstává (nerelevantní dokumenty TTL 30 dní, relevantní se zatím nemažou). Zkrácení na 7/90 dní je možné, ale z hlediska nákladů zbytečné (~15–20 MB ročně).
 
@@ -211,9 +211,14 @@ Embeddingy: Anthropic embedding model nenabízí. Pro dedup a RAG použijeme ext
 - [ ] Legislativa: NÁVRH → SCHVÁLENO → SENÁT → VYHLÁŠENO → ÚČINNÉ (stav nastavuje kód podle psp.cz a e-Sbírky) – vyžaduje nové zdroje
 
 ### Fáze 6 – Briefing a alerty (~1 týden)
-- [ ] Briefing při prvním otevření dne (callable `getBriefing`): období od posledního briefingu, uložený v `briefings/{datum}`
-- [ ] PWA service worker, FCM Web Push, badge s počtem kritických událostí
-- [ ] Pravidla alertů v `users/{uid}/alertRules`; alert obsahuje fakta a skóre (bez nutnosti AI analýzy)
+- [x] Briefing při prvním otevření dne (callable `getBriefing`, Opus, ~$0,06): období od posledního briefingu (max. 7 dní), uložený v `briefings/{datum}`; když nic důležitého, „klidný“ briefing bez AI ($0); zámek proti dvojímu spuštění; ověřeno proti emulátoru
+- [x] Karta briefingu na dashboardu: titulek, největší událost, oddíly podle oblastí s odkazy na události, „Co je dnes důležité pro poradce“
+- [x] Pravidla alertů v `users/{uid}.alertRules` (práh skóre, oblasti, „cokoli z ČNB“) se stránkou Nastavení a náhledem pravidla; `alertMatches` ve `packages/shared` (sdílí backend i UI)
+- [x] Odesílání push alertů z dispatcheru (FCM), každý uživatel max. 1 alert na událost, úklid neplatných zařízení; callable `sendTestNotification`
+- [x] Service worker `public/firebase-messaging-sw.js`, notifikace i při otevřené aplikaci, badge s počtem kritických událostí, PWA ikony a manifest
+- [ ] **Klíč VAPID** (Firebase Console → Cloud Messaging → Web Push certificates) do `NEXT_PUBLIC_FIREBASE_VAPID_KEY` (lokálně `.env.production`, na Vercelu Environment Variables)
+- [ ] **`APP_URL`** (adresa webu na Vercelu) do `functions/.env` – odkazy v notifikacích
+- [ ] Nasazení funkcí (`getBriefing`, `sendTestNotification`, dispatcher s alerty) a webu
 
 ### Fáze 7 – Zpevnění (~1 týden)
 - [ ] Monitoring zdrojů, sledování nákladů AI, retence raw dat

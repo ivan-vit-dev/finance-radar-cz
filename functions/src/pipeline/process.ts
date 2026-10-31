@@ -9,6 +9,7 @@ import { fetchArticle } from "../collectors/article.js";
 import { INDICATORS } from "../indicators/definitions.js";
 import type { IndicatorDoc } from "../indicators/update.js";
 import { MVP_SOURCES } from "../sources.js";
+import { sendAlerts } from "./alerts.js";
 import { marketContextFrom } from "./context.js";
 import { DAILY_AI_LIMIT_USD, recordUsage, spentToday } from "./usage.js";
 import { checkFacts, mergeFacts, scoreEvent, verificationOf } from "./verify.js";
@@ -35,6 +36,7 @@ export interface ProcessResult {
   newEvents: number;
   mergedEvents: number;
   analyzed: number;
+  alertsSent: number;
   errors: string[];
   usd: number;
   skippedReason?: string;
@@ -76,7 +78,11 @@ function toFacts(x: Extraction, docId: string): EventFact[] {
  * Zpracuje čekající dokumenty: text -> klasifikace -> (relevantní) extrakce -> sloučení do
  * události -> ověření a skóre. Nerelevantní dokumenty dostanou TTL a samy se smažou.
  */
-export async function runProcessing(db: Firestore, now = new Date()): Promise<ProcessResult> {
+export async function runProcessing(
+  db: Firestore,
+  now = new Date(),
+  options: { appUrl?: string; sendAlerts?: boolean } = {},
+): Promise<ProcessResult> {
   const result: ProcessResult = {
     processed: 0,
     discarded: 0,
@@ -84,6 +90,7 @@ export async function runProcessing(db: Firestore, now = new Date()): Promise<Pr
     newEvents: 0,
     mergedEvents: 0,
     analyzed: 0,
+    alertsSent: 0,
     errors: [],
     usd: 0,
   };
@@ -232,6 +239,8 @@ export async function runProcessing(db: Firestore, now = new Date()): Promise<Pr
       facts,
       revision: (existing?.revision ?? 0) + 1,
       ...(existing?.analysis ? { analysis: existing.analysis } : {}),
+      // Bez přenosu by sloučení dalšího zdroje poslalo stejný alert znovu.
+      ...(existing?.alertedUsers ? { alertedUsers: existing.alertedUsers } : {}),
     };
     docScores.set(event.id, perDoc);
 
@@ -267,6 +276,17 @@ export async function runProcessing(db: Firestore, now = new Date()): Promise<Pr
   await recordUsage(db, now, costs);
   result.usd = costs.reduce((s, c) => s + c.usd, 0);
   if (changedEvents.size > 0) await rebuildDashboardEvents(db, now);
+
+  // 5) Push alerty podle pravidel uživatelů (selhání nesmí shodit zpracování).
+  if (options.sendAlerts && changedEvents.size > 0) {
+    try {
+      const alerts = await sendAlerts(db, [...changedEvents].map((id) => recent.get(id)!), options.appUrl ?? "");
+      result.alertsSent = alerts.sent;
+      if (alerts.failed) result.errors.push(`alerty: ${alerts.failed} neodešlo, ${alerts.removedTokens} neplatných zařízení smazáno`);
+    } catch (e) {
+      result.errors.push(`alerty: ${(e as Error).message.slice(0, 200)}`);
+    }
+  }
   return result;
 }
 

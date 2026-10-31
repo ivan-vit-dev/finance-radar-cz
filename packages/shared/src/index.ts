@@ -155,6 +155,8 @@ export interface MarketEvent {
   /** Zvyšuje se při každé změně (nový zdroj, nová fakta). */
   revision: number;
   analysis?: EventAnalysis;
+  /** Komu už odešel push alert (uid -> čas) – každý uživatel max. jeden alert na událost. */
+  alertedUsers?: Record<string, unknown>;
 }
 
 export type Trend = "up" | "down" | "flat";
@@ -183,6 +185,56 @@ export interface DashboardSnapshot {
     asOf: string;
   }[];
   categoryTrends: { category: Category; label: string; trend: Trend }[];
+}
+
+/**
+ * Briefing, kolekce `briefings/{YYYY-MM-DD}` (pražské datum). Vzniká při prvním
+ * otevření aplikace v daný den a shrnuje období od předchozího briefingu.
+ */
+export interface Briefing {
+  date: string;
+  coversFrom: string;
+  coversTo: string;
+  generatedAt: string;
+  /** "ai" = shrnutí od modelu; "quiet" = žádné důležité události, bez volání AI. */
+  kind: "ai" | "quiet";
+  model?: string;
+  promptVersion?: string;
+  headline: string;
+  topStory?: { eventId: string; title: string; text: string; watch: string };
+  sections: { area: string; eventIds: string[]; text: string }[];
+  forAdvisor: string[];
+  /** „Dnešní čísla“ – kopie ukazatelů z dashboardu v okamžiku vzniku (počítá kód). */
+  numbers: DashboardSnapshot["indicators"];
+  /** Události, ze kterých briefing vychází (pro odkazy). */
+  events: Pick<MarketEvent, "id" | "title" | "priority" | "finalScore">[];
+}
+
+/**
+ * Pravidla alertů uživatele, dokument `users/{uid}` pole `alertRules` (bod 24 specifikace).
+ * Zařízení pro push notifikace jsou v `users/{uid}/devices/{id}`.
+ */
+export interface AlertRules {
+  enabled: boolean;
+  /** Upozornit při skóre od této hodnoty (90 = jen kritické). */
+  minScore: number;
+  /** Jen tyto oblasti; prázdné pole = všechny. */
+  categories: Category[];
+  /** Upozornit na každou událost z ČNB z primárního zdroje bez ohledu na skóre. */
+  anyCnb: boolean;
+}
+
+export const DEFAULT_ALERT_RULES: AlertRules = { enabled: true, minScore: 80, categories: [], anyCnb: true };
+
+/** Má uživatel dostat alert na tuto událost? Čistá funkce – sdílí ji backend i UI (náhled). */
+export function alertMatches(
+  rules: AlertRules,
+  e: Pick<MarketEvent, "finalScore" | "categories" | "bestTier">,
+): boolean {
+  if (!rules.enabled) return false;
+  if (rules.anyCnb && e.bestTier === 1 && e.categories.includes("cnb")) return true;
+  const inArea = rules.categories.length === 0 || e.categories.some((c) => rules.categories.includes(c));
+  return inArea && e.finalScore >= rules.minScore;
 }
 
 // ---------------------------------------------------------------------------

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useEffect, type ReactNode } from "react";
 import { RadarMark, useUser } from "@/components/auth-gate";
+import { listenForegroundPush } from "@/lib/push";
 
 interface NavItem {
   label: string;
@@ -19,7 +20,7 @@ const NAV: NavItem[] = [
   { label: "Hypotéky", href: "/radar?c=mortgages" },
   { label: "Nemovitosti", href: "/radar?c=real_estate" },
   { label: "Legislativa", href: "/radar?c=legislation" },
-  { label: "Briefing", href: "#", disabled: true },
+  { label: "Nastavení", href: "/nastaveni" },
 ];
 
 function useActiveHref(): string {
@@ -62,6 +63,16 @@ function NavLinks({ vertical }: { vertical: boolean }) {
 /** Rozvržení všech stránek: boční menu na desktopu, vodorovné menu na úzkém okně. */
 export function AppShell({ children }: { children: ReactNode }) {
   const user = useUser();
+
+  // Alerty, které přijdou při otevřené aplikaci, se zobrazí stejně jako na pozadí.
+  useEffect(() => {
+    let stop = () => {};
+    listenForegroundPush()
+      .then((s) => (stop = s))
+      .catch(() => {});
+    return () => stop();
+  }, []);
+
   return (
     <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-4 py-6 lg:px-8">
       <aside className="glass sticky top-6 hidden h-[calc(100vh-3rem)] w-56 shrink-0 flex-col rounded-3xl p-4 lg:flex">
