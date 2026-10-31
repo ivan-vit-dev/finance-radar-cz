@@ -2,7 +2,7 @@
 
 Produktová specifikace: [specs.md](specs.md). Tento dokument popisuje, **jak** ji postavíme.
 
-## ▶ Kde pokračovat (stav k 30. 10. 2026)
+## ▶ Kde pokračovat (stav k 30. 10. 2026 večer)
 
 **Hotovo:**
 - Kostra monorepa (web, functions, shared), build a lint prochází, emulátory naběhnou.
@@ -14,9 +14,11 @@ Produktová specifikace: [specs.md](specs.md). Tento dokument popisuje, **jak** 
 - **Provozní model přestavěn na „analýzu na vyžádání“** (30. 10. 2026), viz sekce Provozní model.
 
 **Další kroky (v tomto pořadí):**
-1. **Fáze 2:** ingestion je hotová a otestovaná proti emulátoru. Zbývá nasadit (`firebase deploy --only functions,firestore`).
-2. **Fáze 3:** ukazatele ČNB/ČSÚ/ARAD do `indicators`.
-3. **Fáze 4:** klasifikace a extrakce nad uloženými dokumenty.
+1. ~~Zkontrolovat noční ingestion~~ Ověřeno 31. 10. 2026: 146 dokumentů, všech 8 zdrojů bez chyb. (`firebase functions:log` umí jen omezený počet záznamů; stav zdrojů je spolehlivěji vidět ve Firestore `sourceState`.)
+2. **Fáze 3:** ukazatele hotové a otestované (31. 10. 2026), zbývá nasadit funkce a nový web.
+3. **Fáze 4:** klasifikace a extrakce nad uloženými dokumenty (stav `pending`) a naplnění „Dnešní top zprávy“.
+
+Rozhodnuto 30. 10. 2026: retence zůstává (nerelevantní dokumenty TTL 30 dní, relevantní se zatím nemažou). Zkrácení na 7/90 dní je možné, ale z hlediska nákladů zbytečné (~15–20 MB ročně).
 
 **Otevřené body:**
 - Na Firebase Hostingu zůstala nasazená stará verze (`finance-radar-cz.web.app`). Rozhodnout, zda ji vypnout (`firebase hosting:disable`).
@@ -148,13 +150,21 @@ Embeddingy: Anthropic embedding model nenabízí. Pro dedup a RAG použijeme ext
 - [x] Stav a chyby zdrojů v `sourceState` (poslední úspěch, chyba, počet chyb v řadě, počet nových)
 - [x] Unit testy (`npm test -w functions`) a běh proti emulátoru (`npm run ingest:emulator -w functions`): 130 dokumentů z 8 zdrojů, opakovaný běh 0 duplicit
 - [x] Build přes esbuild (sdílený balíček se zabalí do `lib/index.js`, jinak by deploy v cloudu selhal)
-- [ ] **Nasazení:** `firebase deploy --only functions,firestore` (čeká na odsouhlasení)
+- [x] **Nasazení** 30. 10. 2026: funkce `dispatcher` (europe-west3), indexy a TTL, politika mazání obrazů kontejneru po 1 dni
 - [ ] Konektory HTML (vláda, ČBA) a API zdroje (ARAD, ČSÚ) – ARAD a ČNB patří do fáze 3
 
 ### Fáze 3 – Tržní ukazatele, deterministicky (~1 týden)
-- [ ] `indicators/{id}/values`: repo / diskont / lombard, EUR/CZK, ARAD (sazby a objemy hypoték, spotřebitelské úvěry, vklady), ČSÚ (inflace, ceny nemovitostí, HDP, nezaměstnanost, mzdy)
-- [ ] ARAD stahovat jen po změně (`/updates`), ne naslepo
-- [ ] Výpočet změn (m/m, r/r, od začátku roku), minim, maxim a trendů v kódu; rozlišit kumulativní a měsíční údaje
+
+**Šetrně:** jeden dokument `indicators/{id}` na ukazatel s kompaktní historií `{p, v}` (25 měsíců / 60 dní / 30 změn repo) a statistikami. 6 ukazatelů ≈ 5 kB. `dashboard/today` ≈ 1,3 kB. Historie a statistiky se neindexují.
+
+- [x] Ukazatele ([functions/src/indicators/definitions.ts](functions/src/indicators/definitions.ts)): repo sazba (ČNB TXT), sazba a objem nových hypoték a sazba spotřebitelských úvěrů (ARAD, jeden dotaz pro všechny řady), meziroční inflace (ČSÚ DataStat `CEN0101HT02`, JSON-stat), EUR/CZK (ČNB API, historie se skládá denně)
+- [x] Statistiky v kódu (`computeIndicatorStats` v `packages/shared`): poslední hodnota, změna proti předchozímu bodu (p. b. nebo %), meziročně, min, max, trend
+- [x] Vlastní frekvence kontroly (kurz 3 h, měsíční statistiky 12 h, repo 6 h), zápis jen při kontrole, dashboard se přepočítá jen při změně
+- [x] Dashboard zobrazuje 6 ukazatelů se změnou a obdobím a trendy pro ČNB, hypotéky, inflaci a úvěry
+- [x] 16 unit testů; ověřeno proti emulátoru se skutečnými daty (repo 3,75 %, hypotéky 5,05 %, inflace 2,5 %, EUR/CZK 24,36)
+- [ ] Nasazení (`firebase deploy --only functions,firestore`)
+- [ ] Další ukazatele podle potřeby: diskont/lombard, sazby vkladů, ceny nemovitostí (ČSÚ `CEN0401`, čtvrtletně), HDP, nezaměstnanost, mzdy
+- [ ] ARAD dotazovat přes `/updates` jen po změně (teď 1 malý dotaz za 12 h, zatím zbytečné)
 
 ### Fáze 4 – Automatická AI vrstva (~2 týdny)
 - [ ] Klasifikace + extrakce: kritické zdroje ihned, ostatní přes Batch API 2× denně (odeslání a vyzvednutí výsledků řídí dispatcher)

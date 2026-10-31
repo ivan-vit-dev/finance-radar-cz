@@ -26,6 +26,17 @@ const PLACEHOLDER_INDICATORS = ["Repo sazba", "Hypotéky", "Inflace", "EUR/CZK"]
 
 const NAV = ["Dashboard", "Radar", "ČNB", "Hypotéky", "Nemovitosti", "Legislativa", "Briefing"];
 
+function formatNumber(n: number, decimals: number): string {
+  return n.toLocaleString("cs-CZ", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+/** „2026-09“ -> „září 2026“, „2026-10-30“ -> „30. 10. 2026“. */
+function formatPeriod(p: string): string {
+  const [y, m, d] = p.split("-").map(Number);
+  if (d) return new Date(y, m - 1, d).toLocaleDateString("cs-CZ");
+  return new Date(y, m - 1, 1).toLocaleDateString("cs-CZ", { month: "long", year: "numeric" });
+}
+
 function greetingFor(hour: number): string {
   if (hour >= 4 && hour < 9) return "Dobré ráno";
   if (hour >= 9 && hour < 12) return "Dobré dopoledne";
@@ -103,11 +114,11 @@ export default function DashboardPage() {
           <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-gradient-to-br from-accent-from/40 to-accent-to/30 blur-3xl" />
           <p className="text-sm font-medium text-accent-to">☕ Morning Briefing</p>
           <h2 className="mt-2 text-xl font-semibold">
-            {snapshot ? "Briefing se připravuje každé ráno v 6:45" : "Zatím nemáme žádná data"}
+            {snapshot ? "Briefing zatím připravujeme" : "Zatím nemáme žádná data"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-muted">
             {snapshot
-              ? `Poslední aktualizace: ${new Date(snapshot.updatedAt).toLocaleString("cs-CZ")}`
+              ? `Tržní ukazatele jsou živé, data aktualizována ${new Date(snapshot.updatedAt).toLocaleString("cs-CZ")}. Shrnutí nejdůležitějších událostí přibude s AI vrstvou.`
               : "Jakmile poběží sběr dat a AI pipeline, uvidíš tu nejdůležitější události dne, ověřená fakta a co z nich plyne pro tvou práci s klienty."}
           </p>
         </section>
@@ -116,20 +127,24 @@ export default function DashboardPage() {
           <h2 id="indicators-h" className="mb-3 text-sm font-medium uppercase tracking-wider text-muted">
             Tržní ukazatele
           </h2>
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-            {snapshot?.indicators.length
+          <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+            {snapshot?.indicators?.length
               ? snapshot.indicators.map((ind) => (
                   <div key={ind.id} className="glass rounded-2xl p-4">
                     <p className="text-sm text-muted">{ind.label}</p>
                     <p className="mt-2 font-mono text-2xl font-semibold tabular-nums">
-                      {ind.value.toLocaleString("cs-CZ")} <span className="text-base text-muted">{ind.unit}</span>
+                      {formatNumber(ind.value, ind.decimals)} <span className="text-base text-muted">{ind.unit}</span>
                     </p>
-                    {ind.change !== undefined && (
-                      <p className={`mt-1 text-xs ${ind.change > 0 ? "text-high" : ind.change < 0 ? "text-info" : "text-muted"}`}>
-                        {ind.change > 0 ? "+" : ""}
-                        {ind.change.toLocaleString("cs-CZ")} {ind.changeUnit}
-                      </p>
-                    )}
+                    <p className="mt-1 flex flex-wrap gap-x-2 text-xs text-muted">
+                      {ind.change !== undefined && (
+                        <span className="text-foreground/80">
+                          {ind.change > 0 ? "↑ +" : ind.change < 0 ? "↓ " : "→ "}
+                          {formatNumber(ind.change, ind.changeUnit === "%" ? 1 : 2)} {ind.changeUnit}
+                          {ind.changeLabel ? ` ${ind.changeLabel}` : ""}
+                        </span>
+                      )}
+                      <span>{formatPeriod(ind.asOf)}</span>
+                    </p>
                   </div>
                 ))
               : PLACEHOLDER_INDICATORS.map((label) => (
@@ -146,7 +161,7 @@ export default function DashboardPage() {
             <h2 id="top-h" className="mb-3 text-sm font-medium uppercase tracking-wider text-muted">
               Dnešní top zprávy
             </h2>
-            {snapshot?.topEvents.length ? (
+            {snapshot?.topEvents?.length ? (
               <ul className="space-y-3">
                 {snapshot.topEvents.map((ev) => (
                   <li key={ev.id} className={`glass rounded-2xl p-4 ${PRIORITY_STYLES[ev.priority].card}`}>
@@ -164,7 +179,7 @@ export default function DashboardPage() {
                 ))}
               </ul>
             ) : (
-              <EmptyCard text="Žádné události. Radar se naplní po spuštění sběru dat (fáze 2–4)." />
+              <EmptyCard text="Zprávy se už sbírají. Důležité události se tu objeví, až je začne třídit AI." />
             )}
           </section>
 
@@ -172,7 +187,7 @@ export default function DashboardPage() {
             <h2 id="trends-h" className="mb-3 text-sm font-medium uppercase tracking-wider text-muted">
               Trendy
             </h2>
-            {snapshot?.categoryTrends.length ? (
+            {snapshot?.categoryTrends?.length ? (
               <ul className="glass divide-y divide-border rounded-2xl">
                 {snapshot.categoryTrends.map((t) => (
                   <li key={t.category} className="flex items-center justify-between px-4 py-3">

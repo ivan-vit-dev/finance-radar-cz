@@ -143,12 +143,85 @@ export interface DashboardSnapshot {
     label: string;
     value: number;
     unit: string;
+    decimals: number;
     /** Změna proti předchozí hodnotě, spočítaná kódem. */
     change?: number;
     changeUnit?: string;
+    /** Období, ke kterému se změna vztahuje, např. „m/m“, „proti 31. 10.“. */
+    changeLabel?: string;
+    /** Období hodnoty: „2026-09“ (měsíc) nebo „2026-10-30“ (den). */
     asOf: string;
   }[];
   categoryTrends: { category: Category; label: string; trend: Trend }[];
+}
+
+// ---------------------------------------------------------------------------
+// Tržní ukazatele (fáze 3). Vše deterministické, žádná AI.
+
+/** Bod časové řady v kompaktní podobě (šetří místo ve Firestore). p = "YYYY-MM" nebo "YYYY-MM-DD". */
+export interface IndicatorPoint {
+  p: string;
+  v: number;
+}
+
+/**
+ * Jak počítat změnu:
+ * - "pb": rozdíl v procentních bodech (sazby, inflace)
+ * - "pct": relativní změna v % (kurz, objemy)
+ */
+export type ChangeMode = "pb" | "pct";
+
+export interface IndicatorStats {
+  latest: IndicatorPoint;
+  previous?: IndicatorPoint;
+  /** Změna proti předchozímu bodu řady. */
+  change?: number;
+  /** Změna proti stejnému období před rokem (jen měsíční řady). */
+  changeYoY?: number;
+  min: IndicatorPoint;
+  max: IndicatorPoint;
+  trend: Trend;
+}
+
+/**
+ * Spočítá statistiky z řady seřazené od nejstarší. Trend porovnává poslední hodnotu
+ * s hodnotou `trendLookback` bodů zpět; změna menší než `trendThreshold` je „flat“.
+ */
+export function computeIndicatorStats(
+  points: IndicatorPoint[],
+  mode: ChangeMode,
+  trendLookback: number,
+  trendThreshold: number,
+): IndicatorStats | null {
+  if (points.length === 0) return null;
+  const latest = points[points.length - 1];
+  const previous = points.length > 1 ? points[points.length - 2] : undefined;
+  const diff = (a: number, b: number) => (mode === "pb" ? a - b : ((a - b) / b) * 100);
+
+  const yearAgoPeriod = /^\d{4}-\d{2}$/.test(latest.p)
+    ? `${Number(latest.p.slice(0, 4)) - 1}${latest.p.slice(4)}`
+    : undefined;
+  const yearAgo = yearAgoPeriod ? points.find((x) => x.p === yearAgoPeriod) : undefined;
+
+  const base = points[Math.max(0, points.length - 1 - trendLookback)];
+  const trendDelta = diff(latest.v, base.v);
+  const trend: Trend =
+    base === latest || Math.abs(trendDelta) < trendThreshold ? "flat" : trendDelta > 0 ? "up" : "down";
+
+  // Chybějící hodnoty se vynechávají úplně (Firestore neumí uložit `undefined`).
+  return {
+    latest,
+    ...(previous ? { previous, change: round(diff(latest.v, previous.v), 4) } : {}),
+    ...(yearAgo ? { changeYoY: round(diff(latest.v, yearAgo.v), 4) } : {}),
+    min: points.reduce((m, x) => (x.v < m.v ? x : m)),
+    max: points.reduce((m, x) => (x.v > m.v ? x : m)),
+    trend,
+  };
+}
+
+function round(n: number, digits: number): number {
+  const f = 10 ** digits;
+  return Math.round(n * f) / f;
 }
 
 /** Váhy finálního skóre (bod 12 specifikace). */

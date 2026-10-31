@@ -35,6 +35,31 @@
       "collectionGroup": "sourceState",
       "fieldPath": "seen",
       "indexes": []
+    },
+    {
+      "collectionGroup": "indicators",
+      "fieldPath": "points",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "indicators",
+      "fieldPath": "stats",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "dashboard",
+      "fieldPath": "indicators",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "dashboard",
+      "fieldPath": "categoryTrends",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "dashboard",
+      "fieldPath": "topEvents",
+      "indexes": []
     }
   ]
 }
